@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Math Master Widget</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; display: flex; flex-direction: column; align-items: center; background: #eef2f7; margin: 0; padding: 20px; }
+        .game-container { background: white; padding: 30px; border-radius: 20px; box-shadow: 0 15px 35px rgba(0,0,0,0.1); width: 95%; max-width: 850px; text-align: center; }
+        
+        .header-info { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; color: #555; font-weight: bold; }
+        
+        /* The 3x Larger Canvas */
+        #canvas { border: 3px solid #3498db; border-radius: 15px; background: #fff; cursor: crosshair; touch-action: none; width: 100%; height: 400px; max-width: 800px; display: block; margin: 0 auto; }
+        
+        .btns { margin-top: 20px; display: flex; gap: 15px; justify-content: center; flex-wrap: wrap; }
+        button { padding: 15px 30px; border: none; border-radius: 10px; font-size: 1.1rem; font-weight: bold; cursor: pointer; transition: 0.2s; }
+        .clear { background: #95a5a6; color: white; }
+        .check { background: #3498db; color: white; }
+        .next { background: #2ecc71; color: white; display: none; }
+        button:hover { opacity: 0.9; transform: translateY(-2px); }
+        button:active { transform: translateY(0); }
+
+        #msg { height: 40px; margin-top: 20px; font-size: 1.3rem; font-weight: bold; }
+        .correct-text { color: #27ae60; }
+        .wrong-text { color: #e74c3c; }
+    </style>
+</head>
+<body>
+
+<div class="game-container">
+    <div class="header-info">
+        <span id="progress">Problem 1 of 10</span>
+        <span id="score">Score: 0</span>
+    </div>
+    
+    <h1 id="question-text" style="font-size: 2.5rem; margin: 10px 0;">2 + 2 = ?</h1>
+    <p style="color: #888;">Write your answer in the box below:</p>
+
+    <canvas id="canvas" width="800" height="400"></canvas>
+    
+    <div id="msg"></div>
+
+    <div class="btns">
+        <button class="clear" onclick="clearCanvas()">Clear Space</button>
+        <button class="check" id="checkBtn" onclick="checkAnswer()">Submit Answer</button>
+        <button class="next" id="nextBtn" onclick="nextQuestion()">Next Question →</button>
+    </div>
+</div>
+
+<script>
+    const problems = [
+        { q: "5 + 3", a: "8" },
+        { q: "10 - 4", a: "6" },
+        { q: "2 × 3", a: "6" },
+        { q: "12 + 5", a: "17" },
+        { q: "9 - 7", a: "2" },
+        { q: "4 + 4", a: "8" },
+        { q: "15 - 5", a: "10" },
+        { q: "3 × 3", a: "9" },
+        { q: "20 - 11", a: "9" },
+        { q: "6 + 7", a: "13" }
+    ];
+
+    let currentIdx = 0;
+    let score = 0;
+    let strokes = [];
+    let currentStroke = [[],[],[]];
+    let isDrawing = false;
+
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const msg = document.getElementById('msg');
+    const qText = document.getElementById('question-text');
+    const progressText = document.getElementById('progress');
+    const scoreText = document.getElementById('score');
+    const nextBtn = document.getElementById('nextBtn');
+    const checkBtn = document.getElementById('checkBtn');
+
+    // Drawing Logic
+    ctx.lineWidth = 8;
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = '#2c3e50';
+
+    function getCoords(e) {
+        const rect = canvas.getBoundingClientRect();
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+        // Scale coordinates based on internal canvas resolution vs displayed size
+        const scaleX = canvas.width / rect.width;
+        const scaleY = canvas.height / rect.height;
+        return [(clientX - rect.left) * scaleX, (clientY - rect.top) * scaleY];
+    }
+
+    function start(e) {
+        e.preventDefault();
+        isDrawing = true;
+        currentStroke = [[],[],[]];
+        const [x, y] = getCoords(e);
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        record(x, y);
+    }
+
+    function move(e) {
+        if (!isDrawing) return;
+        const [x, y] = getCoords(e);
+        ctx.lineTo(x, y);
+        ctx.stroke();
+        record(x, y);
+    }
+
+    function end() {
+        if (isDrawing) strokes.push(currentStroke);
+        isDrawing = false;
+    }
+
+    function record(x, y) {
+        currentStroke[0].push(Math.round(x));
+        currentStroke[1].push(Math.round(y));
+        currentStroke[2].push(Date.now());
+    }
+
+    canvas.addEventListener('mousedown', start);
+    canvas.addEventListener('mousemove', move);
+    window.addEventListener('mouseup', end);
+    canvas.addEventListener('touchstart', start);
+    canvas.addEventListener('touchmove', move);
+    canvas.addEventListener('touchend', end);
+
+    function clearCanvas() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        strokes = [];
+        msg.innerText = "";
+    }
+
+    function loadQuestion() {
+        if (currentIdx < problems.length) {
+            qText.innerText = problems[currentIdx].q + " = ?";
+            progressText.innerText = `Problem ${currentIdx + 1} of 10`;
+            clearCanvas();
+            nextBtn.style.display = "none";
+            checkBtn.style.display = "block";
+        } else {
+            qText.innerText = "All Done! 🎉";
+            msg.className = "correct-text";
+            msg.innerText = "You finished the set!";
+            checkBtn.style.display = "none";
+        }
+    }
+
+    async function checkAnswer() {
+        if (strokes.length === 0) {
+            msg.innerText = "Please write your answer first!";
+            return;
+        }
+
+        msg.className = "";
+        msg.innerText = "Checking handwriting...";
+
+        const payload = {
+            options: "enable_pre_space",
+            requests: [{
+                writing_guide: { writing_area_width: 800, writing_area_height: 400 },
+                ink: strokes,
+                language: "en"
+            }]
+        };
+
+        try {
+            const res = await fetch('https://www.google.com.tw/inputtools/request?ime=handwriting&app=mobilesearch&cs=1&oe=UTF-8', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            const data = await res.json();
+            const result = data[1][0][1][0].trim();
+            const correctA = problems[currentIdx].a;
+
+            if (result === correctA) {
+                msg.className = "correct-text";
+                msg.innerText = `Correct! It's ${result}!`;
+                score += 10;
+                scoreText.innerText = `Score: ${score}`;
+                checkBtn.style.display = "none";
+                nextBtn.style.display = "block";
+            } else {
+                msg.className = "wrong-text";
+                msg.innerText = `Oops! I saw "${result}". Try again!`;
+            }
+        } catch (err) {
+            msg.innerText = "Error: Check your connection.";
+        }
+    }
+
+    function nextQuestion() {
+        currentIdx++;
+        loadQuestion();
+    }
+
+    // Initialize the first question
+    loadQuestion();
+</script>
+
+</body>
+</html>
