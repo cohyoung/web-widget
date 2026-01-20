@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>In-Browser SQL Spreadsheet Widget</title>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.6.2/sql-wasm.js"></script>
+    <link href="https://unpkg.com/tabulator-tables@5.5.0/dist/css/tabulator_modern.min.css" rel="stylesheet">
+    <script type="text/javascript" src="https://unpkg.com/tabulator-tables@5.5.0/dist/js/tabulator.min.js"></script>
+
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f9; margin: 0; padding: 20px; }
+        .container { max-width: 1000px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        .header { border-bottom: 2px solid #0078d4; padding-bottom: 10px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
+        .upload-section { margin-bottom: 20px; border: 2px dashed #0078d4; padding: 20px; text-align: center; border-radius: 5px; background: #f0f8ff; }
+        .query-section { margin-bottom: 20px; display: none; }
+        #sql-input { width: 100%; height: 60px; margin-bottom: 10px; padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-family: monospace; }
+        button { background: #0078d4; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-weight: bold; }
+        button:hover { background: #005a9e; }
+        #table-container { margin-top: 20px; }
+        .status { font-size: 0.9em; color: #666; margin-top: 5px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <h2 style="margin:0; color:#0078d4;">Web Database Widget</h2>
+        <span id="file-name" class="status">No file loaded</span>
+    </div>
+
+    <div class="upload-section" id="drop-zone">
+        <p>Drag & Drop your Spreadsheet (.xlsx, .csv) or</p>
+        <input type="file" id="file-input" accept=".xlsx, .xls, .csv">
+    </div>
+
+    <div class="query-section" id="app-body">
+        <label><strong>SQL Query (Table name is "data"):</strong></label>
+        <textarea id="sql-input">SELECT * FROM data LIMIT 100;</textarea>
+        <button onclick="executeQuery()">Run Query</button>
+        <div id="table-container"></div>
+    </div>
+</div>
+
+<script>
+    let db;
+    let table;
+
+    // Initialize SQL.js
+    const sqlPromise = initSqlJs({
+        locateFile: file => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.6.2/${file}`
+    });
+
+    document.getElementById('file-input').addEventListener('change', handleFile);
+
+    async function handleFile(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        document.getElementById('file-name').innerText = `Loading: ${file.name}...`;
+        const data = await file.arrayBuffer();
+        
+        // 1. Read Excel/CSV with SheetJS
+        const workbook = XLSX.read(data);
+        const firstSheetName = workbook.SheetNames[0];
+        const sheet = workbook.Sheets[firstSheetName];
+        const jsonData = XLSX.utils.sheet_to_json(sheet);
+
+        if (jsonData.length === 0) {
+            alert("The file seems empty!");
+            return;
+        }
+
+        // 2. Initialize Database
+        const SQL = await sqlPromise;
+        db = new SQL.Database();
+
+        // 3. Auto-Build Table Schema
+        const headers = Object.keys(jsonData[0]);
+        const columnsSql = headers.map(h => `"${h}" TEXT`).join(", ");
+        db.run(`CREATE TABLE data (${columnsSql});`);
+
+        // 4. Insert Data
+        const insertStmt = db.prepare(`INSERT INTO data VALUES (${headers.map(() => "?").join(",")})`);
+        jsonData.forEach(row => {
+            const values = headers.map(h => row[h] ?? null);
+            insertStmt.run(values);
+        });
+        insertStmt.free();
+
+        // Show UI
+        document.getElementById('app-body').style.display = 'block';
+        document.getElementById('file-name').innerText = `Active: ${file.name} (${jsonData.length} rows)`;
+        executeQuery();
+    }
+
+    function executeQuery() {
+        const sql = document.getElementById('sql-input').value;
+        try {
+            const res = db.exec(sql);
+            if (res.length > 0) {
+                renderTable(res[0].columns, res[0].values);
+            } else {
+                alert("Query returned no results.");
+            }
+        } catch (err) {
+            alert("SQL Error: " + err.message);
+        }
+    }
+
+    function renderTable(columns, values) {
+        // Map data for Tabulator
+        const tableData = values.map(row => {
+            let obj = {};
+            columns.forEach((col, i) => obj[col] = row[i]);
+            return obj;
+        });
+
+        const tableColumns = columns.map(col => ({
+            title: col, 
+            field: col, 
+            editor: "input", 
+            headerFilter: "input"
+        }));
+
+        // Initialize or Update Tabulator
+        if (table) table.destroy();
+        table = new Tabulator("#table-container", {
+            data: tableData,
+            columns: tableColumns,
+            layout: "fitColumns",
+            pagination: "local",
+            paginationSize: 10,
+            movableColumns: true,
+            resizableRows: true,
+        });
+    }
+</script>
+
+</body>
+</html>
