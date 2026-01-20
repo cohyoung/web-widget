@@ -1,175 +1,81 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>N64 Web Widget</title>
-    <style>
-        body {
-            margin: 0;
-            background: #1a1a1a;
-            color: white;
-            font-family: sans-serif;
-            overflow: hidden;
-            touch-action: none;
-        }
+<div id="fm-widget" class="fm-container">
+  <div class="fm-toolbar">
+    <div class="nav-controls">
+      <button onclick="prevRecord()">◀</button>
+      <span id="record-indicator">1 / 3</span>
+      <button onclick="nextRecord()">▶</button>
+    </div>
+    <div class="view-controls">
+      <button onclick="setView('form')">Form</button>
+      <button onclick="setView('list')">List</button>
+    </div>
+  </div>
 
-        #widget-container {
-            position: relative;
-            width: 100vw;
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-
-        /* Emulator Screen */
-        #canvas-container {
-            width: 100%;
-            max-width: 800px;
-            aspect-ratio: 4 / 3;
-            background: #000;
-            box-shadow: 0 0 20px rgba(0,0,0,0.5);
-        }
-
-        canvas { width: 100%; height: 100%; }
-
-        /* Controls Overlay */
-        #controls {
-            position: absolute;
-            bottom: 20px;
-            width: 100%;
-            height: 50%;
-            pointer-events: none;
-            display: flex;
-            justify-content: space-between;
-            padding: 0 20px;
-            box-sizing: border-box;
-        }
-
-        .btn {
-            background: rgba(255, 255, 255, 0.2);
-            border: 2px solid rgba(255, 255, 255, 0.4);
-            border-radius: 50%;
-            pointer-events: auto;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            user-select: none;
-            font-weight: bold;
-        }
-
-        .btn:active { background: rgba(255, 255, 255, 0.5); }
-
-        /* Left Side: Joystick Area */
-        #joystick-zone {
-            width: 150px;
-            height: 150px;
-            background: rgba(255,255,255,0.05);
-            border-radius: 50%;
-            position: relative;
-        }
-
-        /* Right Side: Buttons */
-        .action-cluster {
-            display: grid;
-            grid-template-areas: 
-                ". cup ."
-                "cl . cr"
-                ". cd ."
-                "b a .";
-            gap: 10px;
-        }
-
-        .btn-a { grid-area: a; width: 60px; height: 60px; background: #2ecc71; }
-        .btn-b { grid-area: b; width: 50px; height: 50px; background: #e74c3c; margin-top: 10px;}
-        .c-btn { width: 40px; height: 40px; background: #f1c40f; color: black; font-size: 12px; }
-
-        /* File Upload Styling */
-        #ui-layer {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            text-align: center;
-            z-index: 10;
-        }
-        
-        input[type="file"] { display: none; }
-        .upload-label {
-            padding: 15px 30px;
-            background: #3498db;
-            border-radius: 5px;
-            cursor: pointer;
-        }
-    </style>
-</head>
-<body>
-
-<div id="widget-container">
-    <div id="ui-layer">
-        <h2>N64 Web Player</h2>
-        <label class="upload-label" for="rom-upload">Upload .z64 or .n64</label>
-        <input type="file" id="rom-upload" accept=".n64,.z64,.v64">
+  <div id="layout-area" class="fm-layout-body">
+    <div id="form-view" class="view-pane">
+      <div class="field-row">
+        <label>Customer Name</label>
+        <input type="text" data-field="name" oninput="updateData(this)">
+      </div>
+      <div class="field-row">
+        <label>Company</label>
+        <input type="text" data-field="company" oninput="updateData(this)">
+      </div>
     </div>
 
-    <div id="canvas-container">
-        <canvas id="canvas"></canvas>
+    <div id="list-view" class="view-pane hidden">
+      <table id="list-table">
+        <thead><tr><th>Name</th><th>Company</th></tr></thead>
+        <tbody id="list-body"></tbody>
+      </table>
     </div>
-
-    <div id="controls">
-        <div id="joystick-zone">
-            <div id="stick" style="position:absolute; top:35%; left:35%; width:30%; height:30%; background:white; border-radius:50%;"></div>
-        </div>
-
-        <div class="action-cluster">
-            <div class="btn c-btn" style="grid-area: cup">C↑</div>
-            <div class="btn c-btn" style="grid-area: cl">C←</div>
-            <div class="btn c-btn" style="grid-area: cr">C→</div>
-            <div class="btn c-btn" style="grid-area: cd">C↓</div>
-            <div class="btn btn-b">B</div>
-            <div class="btn btn-a">A</div>
-        </div>
-    </div>
+  </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/nipplejs@0.10.1/dist/nipplejs.min.js"></script>
+<style>
+  .fm-container { border: 1px solid #ccc; font-family: sans-serif; width: 400px; }
+  .fm-toolbar { background: #f0f0f0; padding: 10px; display: flex; justify-content: space-between; border-bottom: 1px solid #ccc; }
+  .fm-layout-body { padding: 20px; height: 200px; background: white; }
+  .field-row { margin-bottom: 15px; }
+  .field-row label { display: block; font-size: 12px; color: #666; }
+  .hidden { display: none; }
+  table { width: 100%; border-collapse: collapse; }
+  td, th { text-align: left; padding: 5px; border-bottom: 1px solid #eee; font-size: 13px; }
+</style>
+
 <script>
-    // Note: To make this functional, we link to a hosted WASM core. 
-    // Most web N64 emulators require SharedArrayBuffer, which means 
-    // this file must be served via HTTPS with specific headers.
+  let records = [
+    { name: "John Doe", company: "Acme Corp" },
+    { name: "Jane Smith", company: "Globex" },
+    { name: "Bob Ross", company: "Happy Trees" }
+  ];
+  let currentIndex = 0;
 
-    const romUpload = document.getElementById('rom-upload');
-    const uiLayer = document.getElementById('ui-layer');
-
-    romUpload.addEventListener('change', async (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-
-        uiLayer.style.display = 'none';
-        
-        // Initialize the Emulator (Conceptual mapping)
-        console.log("Loading ROM:", file.name);
-        alert("ROM detected! To run this, the file needs to be hosted on a server that supports COOP/COEP headers due to browser security for N64 WASM cores.");
-        
-        // In a production environment, you would call:
-        // emulator.load(await file.arrayBuffer());
+  function renderForm() {
+    const record = records[currentIndex];
+    document.querySelectorAll('[data-field]').forEach(input => {
+      input.value = record[input.dataset.field];
     });
+    document.getElementById('record-indicator').innerText = `${currentIndex + 1} / ${records.length}`;
+  }
 
-    // Initialize Joystick
-    const manager = nipplejs.create({
-        zone: document.getElementById('joystick-zone'),
-        mode: 'static',
-        position: {left: '75px', top: '75px'},
-        color: 'white'
-    });
+  function setView(view) {
+    document.getElementById('form-view').classList.toggle('hidden', view !== 'form');
+    document.getElementById('list-view').classList.toggle('hidden', view !== 'list');
+    if (view === 'list') renderList();
+  }
 
-    manager.on('move', (evt, data) => {
-        // Map data.vector (x, y) to N64 Analog Stick range (-127 to 127)
-        const n64X = Math.round(data.vector.x * 127);
-        const n64Y = Math.round(data.vector.y * 127);
-        // emulator.setAnalog(n64X, n64Y);
-    });
+  function renderList() {
+    const body = document.getElementById('list-body');
+    body.innerHTML = records.map((r, i) => 
+      `<tr onclick="goToRecord(${i})"><td>${r.name}</td><td>${r.company}</td></tr>`
+    ).join('');
+  }
+
+  function nextRecord() { if (currentIndex < records.length - 1) { currentIndex++; renderForm(); } }
+  function prevRecord() { if (currentIndex > 0) { currentIndex--; renderForm(); } }
+  function goToRecord(i) { currentIndex = i; setView('form'); renderForm(); }
+  function updateData(el) { records[currentIndex][el.dataset.field] = el.value; }
+
+  renderForm();
 </script>
-</body>
-</html>
