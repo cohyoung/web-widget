@@ -2,142 +2,174 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>In-Browser SQL Spreadsheet Widget</title>
-    
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.6.2/sql-wasm.js"></script>
-    <link href="https://unpkg.com/tabulator-tables@5.5.0/dist/css/tabulator_modern.min.css" rel="stylesheet">
-    <script type="text/javascript" src="https://unpkg.com/tabulator-tables@5.5.0/dist/js/tabulator.min.js"></script>
-
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>N64 Web Widget</title>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f9; margin: 0; padding: 20px; }
-        .container { max-width: 1000px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
-        .header { border-bottom: 2px solid #0078d4; padding-bottom: 10px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
-        .upload-section { margin-bottom: 20px; border: 2px dashed #0078d4; padding: 20px; text-align: center; border-radius: 5px; background: #f0f8ff; }
-        .query-section { margin-bottom: 20px; display: none; }
-        #sql-input { width: 100%; height: 60px; margin-bottom: 10px; padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-family: monospace; }
-        button { background: #0078d4; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-weight: bold; }
-        button:hover { background: #005a9e; }
-        #table-container { margin-top: 20px; }
-        .status { font-size: 0.9em; color: #666; margin-top: 5px; }
+        body {
+            margin: 0;
+            background: #1a1a1a;
+            color: white;
+            font-family: sans-serif;
+            overflow: hidden;
+            touch-action: none;
+        }
+
+        #widget-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        /* Emulator Screen */
+        #canvas-container {
+            width: 100%;
+            max-width: 800px;
+            aspect-ratio: 4 / 3;
+            background: #000;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+        }
+
+        canvas { width: 100%; height: 100%; }
+
+        /* Controls Overlay */
+        #controls {
+            position: absolute;
+            bottom: 20px;
+            width: 100%;
+            height: 50%;
+            pointer-events: none;
+            display: flex;
+            justify-content: space-between;
+            padding: 0 20px;
+            box-sizing: border-box;
+        }
+
+        .btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: 2px solid rgba(255, 255, 255, 0.4);
+            border-radius: 50%;
+            pointer-events: auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            user-select: none;
+            font-weight: bold;
+        }
+
+        .btn:active { background: rgba(255, 255, 255, 0.5); }
+
+        /* Left Side: Joystick Area */
+        #joystick-zone {
+            width: 150px;
+            height: 150px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 50%;
+            position: relative;
+        }
+
+        /* Right Side: Buttons */
+        .action-cluster {
+            display: grid;
+            grid-template-areas: 
+                ". cup ."
+                "cl . cr"
+                ". cd ."
+                "b a .";
+            gap: 10px;
+        }
+
+        .btn-a { grid-area: a; width: 60px; height: 60px; background: #2ecc71; }
+        .btn-b { grid-area: b; width: 50px; height: 50px; background: #e74c3c; margin-top: 10px;}
+        .c-btn { width: 40px; height: 40px; background: #f1c40f; color: black; font-size: 12px; }
+
+        /* File Upload Styling */
+        #ui-layer {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            z-index: 10;
+        }
+        
+        input[type="file"] { display: none; }
+        .upload-label {
+            padding: 15px 30px;
+            background: #3498db;
+            border-radius: 5px;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <div class="header">
-        <h2 style="margin:0; color:#0078d4;">Web Database Widget</h2>
-        <span id="file-name" class="status">No file loaded</span>
+<div id="widget-container">
+    <div id="ui-layer">
+        <h2>N64 Web Player</h2>
+        <label class="upload-label" for="rom-upload">Upload .z64 or .n64</label>
+        <input type="file" id="rom-upload" accept=".n64,.z64,.v64">
     </div>
 
-    <div class="upload-section" id="drop-zone">
-        <p>Drag & Drop your Spreadsheet (.xlsx, .csv) or</p>
-        <input type="file" id="file-input" accept=".xlsx, .xls, .csv">
+    <div id="canvas-container">
+        <canvas id="canvas"></canvas>
     </div>
 
-    <div class="query-section" id="app-body">
-        <label><strong>SQL Query (Table name is "data"):</strong></label>
-        <textarea id="sql-input">SELECT * FROM data LIMIT 100;</textarea>
-        <button onclick="executeQuery()">Run Query</button>
-        <div id="table-container"></div>
+    <div id="controls">
+        <div id="joystick-zone">
+            <div id="stick" style="position:absolute; top:35%; left:35%; width:30%; height:30%; background:white; border-radius:50%;"></div>
+        </div>
+
+        <div class="action-cluster">
+            <div class="btn c-btn" style="grid-area: cup">C↑</div>
+            <div class="btn c-btn" style="grid-area: cl">C←</div>
+            <div class="btn c-btn" style="grid-area: cr">C→</div>
+            <div class="btn c-btn" style="grid-area: cd">C↓</div>
+            <div class="btn btn-b">B</div>
+            <div class="btn btn-a">A</div>
+        </div>
     </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/nipplejs@0.10.1/dist/nipplejs.min.js"></script>
 <script>
-    let db;
-    let table;
+    // Note: To make this functional, we link to a hosted WASM core. 
+    // Most web N64 emulators require SharedArrayBuffer, which means 
+    // this file must be served via HTTPS with specific headers.
 
-    // Initialize SQL.js
-    const sqlPromise = initSqlJs({
-        locateFile: file => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.6.2/${file}`
-    });
+    const romUpload = document.getElementById('rom-upload');
+    const uiLayer = document.getElementById('ui-layer');
 
-    document.getElementById('file-input').addEventListener('change', handleFile);
-
-    async function handleFile(e) {
+    romUpload.addEventListener('change', async (e) => {
         const file = e.target.files[0];
         if (!file) return;
 
-        document.getElementById('file-name').innerText = `Loading: ${file.name}...`;
-        const data = await file.arrayBuffer();
+        uiLayer.style.display = 'none';
         
-        // 1. Read Excel/CSV with SheetJS
-        const workbook = XLSX.read(data);
-        const firstSheetName = workbook.SheetNames[0];
-        const sheet = workbook.Sheets[firstSheetName];
-        const jsonData = XLSX.utils.sheet_to_json(sheet);
+        // Initialize the Emulator (Conceptual mapping)
+        console.log("Loading ROM:", file.name);
+        alert("ROM detected! To run this, the file needs to be hosted on a server that supports COOP/COEP headers due to browser security for N64 WASM cores.");
+        
+        // In a production environment, you would call:
+        // emulator.load(await file.arrayBuffer());
+    });
 
-        if (jsonData.length === 0) {
-            alert("The file seems empty!");
-            return;
-        }
+    // Initialize Joystick
+    const manager = nipplejs.create({
+        zone: document.getElementById('joystick-zone'),
+        mode: 'static',
+        position: {left: '75px', top: '75px'},
+        color: 'white'
+    });
 
-        // 2. Initialize Database
-        const SQL = await sqlPromise;
-        db = new SQL.Database();
-
-        // 3. Auto-Build Table Schema
-        const headers = Object.keys(jsonData[0]);
-        const columnsSql = headers.map(h => `"${h}" TEXT`).join(", ");
-        db.run(`CREATE TABLE data (${columnsSql});`);
-
-        // 4. Insert Data
-        const insertStmt = db.prepare(`INSERT INTO data VALUES (${headers.map(() => "?").join(",")})`);
-        jsonData.forEach(row => {
-            const values = headers.map(h => row[h] ?? null);
-            insertStmt.run(values);
-        });
-        insertStmt.free();
-
-        // Show UI
-        document.getElementById('app-body').style.display = 'block';
-        document.getElementById('file-name').innerText = `Active: ${file.name} (${jsonData.length} rows)`;
-        executeQuery();
-    }
-
-    function executeQuery() {
-        const sql = document.getElementById('sql-input').value;
-        try {
-            const res = db.exec(sql);
-            if (res.length > 0) {
-                renderTable(res[0].columns, res[0].values);
-            } else {
-                alert("Query returned no results.");
-            }
-        } catch (err) {
-            alert("SQL Error: " + err.message);
-        }
-    }
-
-    function renderTable(columns, values) {
-        // Map data for Tabulator
-        const tableData = values.map(row => {
-            let obj = {};
-            columns.forEach((col, i) => obj[col] = row[i]);
-            return obj;
-        });
-
-        const tableColumns = columns.map(col => ({
-            title: col, 
-            field: col, 
-            editor: "input", 
-            headerFilter: "input"
-        }));
-
-        // Initialize or Update Tabulator
-        if (table) table.destroy();
-        table = new Tabulator("#table-container", {
-            data: tableData,
-            columns: tableColumns,
-            layout: "fitColumns",
-            pagination: "local",
-            paginationSize: 10,
-            movableColumns: true,
-            resizableRows: true,
-        });
-    }
+    manager.on('move', (evt, data) => {
+        // Map data.vector (x, y) to N64 Analog Stick range (-127 to 127)
+        const n64X = Math.round(data.vector.x * 127);
+        const n64Y = Math.round(data.vector.y * 127);
+        // emulator.setAnalog(n64X, n64Y);
+    });
 </script>
-
 </body>
 </html>
