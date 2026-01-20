@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visual Multiplication</title>
+    <style>
+        :root {
+            --primary: #2563eb; 
+            --success: #10b981; 
+            --bg: #f8fafc;
+            --dot-off: #e2e8f0;
+            --cell-size: 48px;
+            --gap: 6px;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background-color: #f1f5f9;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            margin: 0;
+        }
+
+        .widget-container {
+            background: white;
+            padding: 30px 40px;
+            border-radius: 24px;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            max-width: 950px;
+        }
+
+        .main-title {
+            color: var(--primary);
+            margin: 0 0 25px 0;
+            font-size: 38px;
+            text-transform: uppercase;
+            font-weight: 900;
+        }
+
+        .header-section { margin-bottom: 20px; }
+
+        .equation-display {
+            font-size: 72px;
+            font-weight: 800;
+            color: #1e293b;
+            margin-bottom: 15px;
+        }
+
+        .controls-wrapper {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 20px;
+            padding: 15px;
+            background: #f1f5f9;
+            border-radius: 16px;
+            margin-bottom: 10px;
+        }
+
+        .input-group {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 24px;
+            font-weight: 600;
+            color: #64748b;
+        }
+
+        input {
+            width: 85px;
+            height: 65px;
+            font-size: 36px;
+            text-align: center;
+            border: 3px solid var(--primary);
+            border-radius: 12px;
+            font-weight: bold;
+            color: var(--primary);
+        }
+
+        .color-select-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 18px;
+            color: #64748b;
+            padding-left: 20px;
+            border-left: 2px solid #cbd5e1;
+        }
+
+        select {
+            font-size: 16px;
+            padding: 8px;
+            border-radius: 10px;
+            border: 2px solid #cbd5e1;
+            cursor: pointer;
+            background: white;
+        }
+
+        /* Grid */
+        .master-grid {
+            display: grid;
+            grid-template-columns: 40px repeat(12, var(--cell-size));
+            grid-template-rows: 40px repeat(12, var(--cell-size));
+            gap: var(--gap);
+            margin: 20px auto 0;
+            padding: 20px;
+            background: #ffffff;
+            border-radius: 20px;
+            border: 2px solid #e2e8f0;
+            width: fit-content;
+        }
+
+        .label {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: 800;
+            color: #cbd5e1;
+            font-size: 18px;
+        }
+
+        .label.active { color: var(--primary); font-size: 24px; }
+
+        .dot {
+            width: var(--cell-size);
+            height: var(--cell-size);
+            background-color: var(--dot-off);
+            border-radius: 10px;
+            transition: background-color 0.15s ease;
+        }
+
+        .dot.active { background-color: var(--success); }
+
+        .corner { grid-area: 1 / 1 / 2 / 2; }
+
+        /* PDF Button Container */
+        .pdf-action-container {
+            margin-top: 25px;
+            padding-top: 15px;
+        }
+
+        .btn-pdf {
+            background-color: #ef4444;
+            color: white;
+            border: none;
+            padding: 14px 32px;
+            font-size: 18px;
+            font-weight: bold;
+            border-radius: 12px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            transition: all 0.2s;
+        }
+
+        .btn-pdf:hover {
+            background-color: #dc2626;
+            transform: scale(1.05);
+        }
+
+        @media print {
+            body { background: white; padding: 0; }
+            .widget-container { box-shadow: none; border: none; width: 100%; }
+            .controls-wrapper, .pdf-action-container { display: none; }
+            .dot.active { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .master-grid { border: none; margin-top: 0; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="widget-container">
+    <h1 class="main-title">Visual Multiplication</h1>
+
+    <div class="header-section">
+        <div class="equation-display" id="output">3 × 4 = 12</div>
+        
+        <div class="controls-wrapper">
+            <div class="input-group">
+                <input type="number" id="rows" value="3" min="1" max="12" oninput="draw()">
+                <span>Rows of</span>
+                <input type="number" id="cols" value="4" min="1" max="12" oninput="draw()">
+            </div>
+            
+            <div class="color-select-group">
+                <label>Color:</label>
+                <select id="colorSelect" onchange="changeColor()">
+                    <option value="#10b981" selected>Green</option>
+                    <option value="#3b82f6">Blue</option>
+                    <option value="#8b5cf6">Purple</option>
+                    <option value="#f97316">Orange</option>
+                    <option value="#ef4444">Red</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <div class="master-grid" id="masterGrid">
+        <div class="corner"></div>
+    </div>
+
+    <div class="pdf-action-container">
+        <button class="btn-pdf" onclick="window.print()">
+            <span>📄</span> Save as PDF
+        </button>
+    </div>
+</div>
+
+<script>
+    const masterGrid = document.getElementById('masterGrid');
+    const MAX_SIZE = 12;
+
+    // Build 12x12 Grid
+    for (let c = 1; c <= MAX_SIZE; c++) {
+        const lbl = document.createElement('div');
+        lbl.className = 'label'; lbl.id = `col-label-${c}`; lbl.innerText = c;
+        lbl.style.gridColumn = c + 1; lbl.style.gridRow = 1;
+        masterGrid.appendChild(lbl);
+    }
+    for (let r = 1; r <= MAX_SIZE; r++) {
+        const lbl = document.createElement('div');
+        lbl.className = 'label'; lbl.id = `row-label-${r}`; lbl.innerText = r;
+        lbl.style.gridColumn = 1; lbl.style.gridRow = r + 1;
+        masterGrid.appendChild(lbl);
+    }
+    for (let r = 1; r <= MAX_SIZE; r++) {
+        for (let c = 1; c <= MAX_SIZE; c++) {
+            const dot = document.createElement('div');
+            dot.className = 'dot'; dot.id = `dot-${r}-${c}`;
+            dot.style.gridColumn = c + 1; dot.style.gridRow = r + 1;
+            masterGrid.appendChild(dot);
+        }
+    }
+
+    function changeColor() {
+        document.documentElement.style.setProperty('--success', document.getElementById('colorSelect').value);
+        draw();
+    }
+
+    function draw() {
+        let rVal = parseInt(document.getElementById('rows').value) || 1;
+        let cVal = parseInt(document.getElementById('cols').value) || 1;
+
+        if (rVal > MAX_SIZE) rVal = MAX_SIZE; 
+        if (cVal > MAX_SIZE) cVal = MAX_SIZE;
+        if (rVal < 1) rVal = 1;
+        if (cVal < 1) cVal = 1;
+
+        const total = rVal * cVal;
+
+        for (let i = 1; i <= MAX_SIZE; i++) {
+            document.getElementById(`col-label-${i}`).classList.toggle('active', i <= cVal);
+            document.getElementById(`row-label-${i}`).classList.toggle('active', i <= rVal);
+        }
+
+        for (let r = 1; r <= MAX_SIZE; r++) {
+            for (let c = 1; c <= MAX_SIZE; c++) {
+                const dot = document.getElementById(`dot-${r}-${c}`);
+                dot.classList.toggle('active', r <= rVal && c <= cVal);
+            }
+        }
+
+        document.getElementById('output').innerHTML = `${rVal} × ${cVal} = <span style="color:var(--success)">${total}</span>`;
+    }
+
+    draw();
+</script>
+
+</body>
+</html>
