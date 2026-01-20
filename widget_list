@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ultimate Emoji Widget</title>
+    <style>
+        :root {
+            --bg-color: #f4f6f8;
+            --sidebar-bg: #ffffff;
+            --active-color: #6366f1; /* Indigo */
+            --active-bg: #e0e7ff;
+            --text-color: #1f2937;
+            --border-color: #e5e7eb;
+            --emoji-size: 2rem;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            color: var(--text-color);
+        }
+
+        /* Widget Container */
+        .emoji-widget {
+            display: flex;
+            width: 900px;
+            height: 600px;
+            background: var(--sidebar-bg);
+            border-radius: 16px;
+            box-shadow: var(--shadow);
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+        }
+
+        /* Sidebar (Categories) */
+        .sidebar {
+            width: 240px;
+            background: #fafafa;
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .sidebar-header {
+            padding: 20px;
+            font-weight: 700;
+            font-size: 1.2rem;
+            color: var(--active-color);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .category-list {
+            flex: 1;
+            overflow-y: auto;
+            list-style: none;
+            padding: 10px;
+            margin: 0;
+        }
+
+        .category-btn {
+            display: flex;
+            align-items: center;
+            width: 100%;
+            padding: 12px 16px;
+            margin-bottom: 4px;
+            border: none;
+            background: none;
+            border-radius: 8px;
+            cursor: pointer;
+            text-align: left;
+            font-size: 0.95rem;
+            color: #4b5563;
+            transition: all 0.2s;
+        }
+
+        .category-btn:hover {
+            background-color: #f3f4f6;
+        }
+
+        .category-btn.active {
+            background-color: var(--active-bg);
+            color: var(--active-color);
+            font-weight: 600;
+        }
+
+        /* Main Content Area */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: #fff;
+        }
+
+        /* Search Bar */
+        .search-container {
+            padding: 16px 24px;
+            border-bottom: 1px solid var(--border-color);
+            background: #fff;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 12px 16px;
+            border-radius: 8px;
+            border: 2px solid var(--border-color);
+            font-size: 1rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .search-input:focus {
+            border-color: var(--active-color);
+        }
+
+        /* Emoji Grid */
+        .emoji-grid-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 24px;
+            position: relative;
+        }
+
+        .emoji-section-title {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 16px;
+            color: #6b7280;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .emoji-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
+            gap: 12px;
+        }
+
+        .emoji-item {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 60px;
+            font-size: var(--emoji-size);
+            background: #fff;
+            border: 1px solid transparent;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: transform 0.1s, background 0.2s;
+        }
+
+        .emoji-item:hover {
+            transform: scale(1.1);
+            background: #f9fafb;
+            border-color: var(--border-color);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        .emoji-item:active {
+            transform: scale(0.95);
+        }
+
+        /* Loading State */
+        .loading-state, .error-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: #6b7280;
+            text-align: center;
+            padding: 20px;
+        }
+        
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid var(--active-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 16px;
+        }
+
+        /* Toast Notification */
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #1f2937;
+            color: #fff;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s;
+            z-index: 1000;
+        }
+        
+        .toast.show {
+            opacity: 1;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Scrollbar styling */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
+
+        @media (max-width: 768px) {
+            .emoji-widget {
+                flex-direction: column;
+                width: 95%;
+                height: 80vh;
+            }
+            .sidebar {
+                width: 100%;
+                height: 140px; /* Short scrollable top bar */
+                flex-direction: row;
+                overflow-x: auto;
+                border-right: none;
+                border-bottom: 1px solid var(--border-color);
+            }
+            .sidebar-header {
+                display: none;
+            }
+            .category-list {
+                display: flex;
+                padding: 10px;
+            }
+            .category-btn {
+                width: auto;
+                white-space: nowrap;
+                margin-bottom: 0;
+                margin-right: 8px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="emoji-widget">
+        <aside class="sidebar">
+            <div class="sidebar-header">EmojiPedia</div>
+            <ul class="category-list" id="categoryList">
+                </ul>
+        </aside>
+
+        <main class="main-content">
+            <div class="search-container">
+                <input type="text" class="search-input" id="searchInput" placeholder="Search emojis (e.g., 'cat', 'smile', 'taco')...">
+            </div>
+            
+            <div class="emoji-grid-container" id="emojiContainer">
+                <div class="loading-state">
+                    <div class="spinner"></div>
+                    <p>Fetching 1,800+ Emojis from the cloud...</p>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <div id="toast" class="toast">Copied to clipboard!</div>
+
+    <script>
+        /**
+         * Emoji Widget Logic
+         * Fetches data from cdn.jsdelivr.net to ensure a comprehensive list.
+         */
+
+        const DATA_URL = 'https://cdn.jsdelivr.net/npm/emoji-datasource-apple@15.0.1/emoji.json';
+        
+        // State
+        let allEmojis = [];
+        let categories = {};
+        let currentCategory = 'Smileys & Emotion'; // Default
+
+        // DOM Elements
+        const categoryListEl = document.getElementById('categoryList');
+        const emojiContainerEl = document.getElementById('emojiContainer');
+        const searchInputEl = document.getElementById('searchInput');
+        const toastEl = document.getElementById('toast');
+
+        // 1. Utility: Convert Hex string to Emoji Character
+        function unifiedToNative(unified) {
+            return String.fromCodePoint(...unified.split('-').map(u => parseInt(u, 16)));
+        }
+
+        // 2. Fetch Data
+        async function init() {
+            try {
+                const response = await fetch(DATA_URL);
+                if (!response.ok) throw new Error("Network response was not ok");
+                
+                const data = await response.json();
+                processData(data);
+                renderCategories();
+                renderEmojis(currentCategory);
+            } catch (error) {
+                console.error("Failed to load emojis:", error);
+                emojiContainerEl.innerHTML = `
+                    <div class="error-state">
+                        <p>⚠️ Failed to load emojis.<br>Please check your internet connection.</p>
+                    </div>`;
+            }
+        }
+
+        // 3. Process Data into Categories
+        function processData(data) {
+            // Sort order based on official Unicode standards usually, 
+            // but we group by the 'category' key in the JSON.
+            
+            // Clean up: Filter out non-standard items if necessary
+            allEmojis = data.map(item => ({
+                char: unifiedToNative(item.unified),
+                name: item.short_name || item.name,
+                category: item.category,
+                keywords: item.short_names.join(" ")
+            }));
+
+            // Group by Category
+            allEmojis.forEach(emoji => {
+                if (!categories[emoji.category]) {
+                    categories[emoji.category] = [];
+                }
+                categories[emoji.category].push(emoji);
+            });
+
+            // Ensure specific sort order for categories
+            const order = [
+                "Smileys & Emotion",
+                "People & Body",
+                "Animals & Nature",
+                "Food & Drink",
+                "Travel & Places",
+                "Activities",
+                "Objects",
+                "Symbols",
+                "Flags"
+            ];
+            
+            // Reorder the keys object
+            const orderedCategories = {};
+            order.forEach(key => {
+                if (categories[key]) orderedCategories[key] = categories[key];
+            });
+            // Add any remaining categories that weren't in our hardcoded list
+            Object.keys(categories).forEach(key => {
+                if (!orderedCategories[key]) orderedCategories[key] = categories[key];
+            });
+            categories = orderedCategories;
+        }
+
+        // 4. Render Sidebar Categories
+        function renderCategories() {
+            categoryListEl.innerHTML = '';
+            
+            Object.keys(categories).forEach(cat => {
+                const li = document.createElement('li');
+                const btn = document.createElement('button');
+                btn.className = `category-btn ${cat === currentCategory ? 'active' : ''}`;
+                btn.textContent = cat;
+                
+                btn.onclick = () => {
+                    // Update Active UI
+                    document.querySelectorAll('.category-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    
+                    // Clear Search
+                    searchInputEl.value = '';
+                    
+                    // Render
+                    currentCategory = cat;
+                    renderEmojis(cat);
+                };
+
+                li.appendChild(btn);
+                categoryListEl.appendChild(li);
+            });
+        }
+
+        // 5. Render Emojis for a Category
+        function renderEmojis(categoryName) {
+            emojiContainerEl.innerHTML = '';
+            
+            // Header
+            const title = document.createElement('div');
+            title.className = 'emoji-section-title';
+            title.textContent = categoryName;
+            emojiContainerEl.appendChild(title);
+
+            // Grid
+            const grid = document.createElement('div');
+            grid.className = 'emoji-grid';
+
+            const emojisToRender = categories[categoryName] || [];
+
+            emojisToRender.forEach(emoji => {
+                const el = createEmojiElement(emoji);
+                grid.appendChild(el);
+            });
+
+            emojiContainerEl.appendChild(grid);
+            emojiContainerEl.scrollTop = 0;
+        }
+
+        // 6. Create Single Emoji Element
+        function createEmojiElement(emoji) {
+            const div = document.createElement('div');
+            div.className = 'emoji-item';
+            div.textContent = emoji.char;
+            div.title = `:${emoji.name}:`; // Hover text
+            
+            div.onclick = () => {
+                copyToClipboard(emoji.char);
+            };
+            
+            return div;
+        }
+
+        // 7. Search Functionality
+        searchInputEl.addEventListener('input', (e) => {
+            const query = e.target.value.toLowerCase();
+            
+            if (!query) {
+                renderEmojis(currentCategory);
+                return;
+            }
+
+            // Filter ALL emojis
+            const results = allEmojis.filter(emoji => 
+                emoji.name.toLowerCase().includes(query) || 
+                emoji.keywords.toLowerCase().includes(query)
+            );
+
+            // Render Search Results
+            emojiContainerEl.innerHTML = '';
+            const title = document.createElement('div');
+            title.className = 'emoji-section-title';
+            title.textContent = `Search Results (${results.length})`;
+            emojiContainerEl.appendChild(title);
+
+            if (results.length === 0) {
+                const noRes = document.createElement('div');
+                noRes.style.color = '#9ca3af';
+                noRes.style.textAlign = 'center';
+                noRes.style.marginTop = '20px';
+                noRes.textContent = 'No emojis found.';
+                emojiContainerEl.appendChild(noRes);
+                return;
+            }
+
+            const grid = document.createElement('div');
+            grid.className = 'emoji-grid';
+            
+            // Limit render for performance if query is very broad
+            const limit = results.slice(0, 500); 
+            
+            limit.forEach(emoji => {
+                grid.appendChild(createEmojiElement(emoji));
+            });
+            
+            emojiContainerEl.appendChild(grid);
+        });
+
+        // 8. Copy to Clipboard
+        function copyToClipboard(char) {
+            navigator.clipboard.writeText(char).then(() => {
+                showToast(`Copied ${char}`);
+            });
+        }
+
+        function showToast(msg) {
+            toastEl.textContent = msg;
+            toastEl.classList.add('show');
+            setTimeout(() => {
+                toastEl.classList.remove('show');
+            }, 2000);
+        }
+
+        // Start
+        init();
+
+    </script>
+</body>
+</html>
