@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Physics Measurement Toolkit Pro</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --bg: #f8fafc;
+            --card: #ffffff;
+            --text: #1e293b;
+            --accent: #059669;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 500px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .card {
+            background: var(--card);
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+
+        .tool-icon {
+            font-size: 2rem;
+            margin-bottom: 10px;
+        }
+
+        .value-display {
+            font-size: 2.2rem;
+            font-weight: bold;
+            color: var(--primary);
+            margin: 5px 0;
+        }
+
+        .label {
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #64748b;
+        }
+
+        button {
+            padding: 10px 15px;
+            border: none;
+            border-radius: 6px;
+            background: var(--primary);
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+
+        button:disabled { background: #cbd5e1; }
+        
+        .stop-btn { background: #dc2626; }
+
+        canvas {
+            width: 100%;
+            height: 80px;
+            background: #eee;
+            border-radius: 4px;
+            margin-top: 10px;
+        }
+
+        #inclinometer-visual {
+            width: 80px; height: 80px;
+            border: 4px solid var(--primary);
+            border-radius: 50%;
+            margin: 10px auto;
+            position: relative;
+        }
+
+        #inclinometer-visual::after {
+            content: '';
+            position: absolute;
+            top: 0; left: 50%;
+            width: 4px; height: 50%;
+            background: red;
+            transform-origin: bottom center;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header style="text-align: center;">
+        <h2>Environment Lab Pro</h2>
+        <p>Advanced Physical Sensor Suite</p>
+    </header>
+
+    <div class="card">
+        <div class="tool-icon">🏃</div>
+        <div class="label">Distance & Velocity</div>
+        <div class="value-display" id="dist-value">0.00 m</div>
+        <div id="time-value" style="font-weight: bold;">00:00</div>
+        <div id="speed-value" style="font-size: 0.9rem; color: var(--accent);">Avg Speed: 0 m/s</div>
+        <div class="controls">
+            <button id="start-gps">Start Tracking</button>
+            <button id="stop-gps" class="stop-btn" style="display:none;">Stop</button>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="tool-icon">🧲</div>
+        <div class="label">Magnetic Field (Total)</div>
+        <div class="value-display" id="mag-value">-- μT</div>
+        <p style="font-size: 0.8rem;">Detects magnetic North or local metals</p>
+        <button id="start-mag">Enable Magnetometer</button>
+    </div>
+
+    <div class="card">
+        <div class="tool-icon">☁️</div>
+        <div class="label">Atmospheric Pressure</div>
+        <div class="value-display" id="baro-value">-- hPa</div>
+        <button id="start-baro">Enable Barometer</button>
+    </div>
+
+    <div class="card">
+        <div class="tool-icon">🔊</div>
+        <div class="label">Sound Intensity</div>
+        <div class="value-display" id="db-value">-- dB</div>
+        <canvas id="audio-visualizer"></canvas>
+        <button id="start-audio">Start Mic</button>
+    </div>
+
+    <div class="card">
+        <div class="tool-icon">📐</div>
+        <div class="label">Inclinometer</div>
+        <div id="inclinometer-visual"></div>
+        <div class="value-display" id="angle-value">0°</div>
+        <button id="start-motion">Enable Motion</button>
+    </div>
+
+    <div class="card">
+        <div class="tool-icon">💡</div>
+        <div class="label">Light Intensity</div>
+        <div class="value-display" id="light-value">0%</div>
+        <video id="video-ref" style="display:none;" autoplay playsinline></video>
+        <button id="start-light">Start Light Sensor</button>
+    </div>
+</div>
+
+<script>
+    // --- DISTANCE TRACKER (GPS) ---
+    let watchId = null;
+    let startTime = null;
+    let totalDistance = 0;
+    let lastPos = null;
+    let timerInterval = null;
+
+    function getDistance(lat1, lon1, lat2, lon2) {
+        const R = 6371e3; // Earth radius in meters
+        const φ1 = lat1 * Math.PI/180;
+        const φ2 = lat2 * Math.PI/180;
+        const Δφ = (lat2-lat1) * Math.PI/180;
+        const Δλ = (lon2-lon1) * Math.PI/180;
+        const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
+                Math.cos(φ1) * Math.cos(φ2) *
+                Math.sin(Δλ/2) * Math.sin(Δλ/2);
+        return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    }
+
+    document.getElementById('start-gps').onclick = () => {
+        if (!navigator.geolocation) return alert("GPS not supported");
+        
+        startTime = Date.now();
+        totalDistance = 0;
+        lastPos = null;
+        
+        document.getElementById('start-gps').style.display = 'none';
+        document.getElementById('stop-gps').style.display = 'inline-block';
+
+        timerInterval = setInterval(() => {
+            let elapsed = Math.floor((Date.now() - startTime) / 1000);
+            let m = Math.floor(elapsed / 60).toString().padStart(2, '0');
+            let s = (elapsed % 60).toString().padStart(2, '0');
+            document.getElementById('time-value').innerText = `${m}:${s}`;
+        }, 1000);
+
+        watchId = navigator.geolocation.watchPosition((pos) => {
+            if (lastPos) {
+                let d = getDistance(lastPos.coords.latitude, lastPos.coords.longitude, 
+                                    pos.coords.latitude, pos.coords.longitude);
+                if (pos.coords.accuracy < 20) { // Filter jitter
+                    totalDistance += d;
+                }
+            }
+            lastPos = pos;
+            document.getElementById('dist-value').innerText = `${totalDistance.toFixed(2)} m`;
+            
+            let timeSec = (Date.now() - startTime) / 1000;
+            let speed = timeSec > 0 ? (totalDistance / timeSec) : 0;
+            document.getElementById('speed-value').innerText = `Avg Speed: ${speed.toFixed(2)} m/s`;
+        }, null, { enableHighAccuracy: true });
+    };
+
+    document.getElementById('stop-gps').onclick = () => {
+        navigator.geolocation.clearWatch(watchId);
+        clearInterval(timerInterval);
+        document.getElementById('start-gps').style.display = 'inline-block';
+        document.getElementById('stop-gps').style.display = 'none';
+    };
+
+    // --- MAGNETOMETER ---
+    document.getElementById('start-mag').onclick = () => {
+        try {
+            const sensor = new Magnetometer({frequency: 10});
+            sensor.addEventListener('reading', () => {
+                // Magnitude = sqrt(x² + y² + z²)
+                let totalField = Math.sqrt(sensor.x**2 + sensor.y**2 + sensor.z**2);
+                document.getElementById('mag-value').innerText = `${totalField.toFixed(1)} μT`;
+            });
+            sensor.start();
+        } catch (e) {
+            // Fallback for older browsers using orientation
+            window.addEventListener('deviceorientation', (e) => {
+                if(e.webkitCompassHeading) document.getElementById('mag-value').innerText = `${Math.round(e.webkitCompassHeading)}° N`;
+            });
+            alert("Generic Magnetometer API not supported. Falling back to Compass mode.");
+        }
+    };
+
+    // --- BAROMETER ---
+    document.getElementById('start-baro').onclick = () => {
+        try {
+            const sensor = new PressureSensor({frequency: 1});
+            sensor.addEventListener('reading', () => {
+                document.getElementById('baro-value').innerText = `${sensor.pressure.toFixed(2)} hPa`;
+            });
+            sensor.start();
+        } catch (e) {
+            alert("Barometer (Pressure Sensor) not available on this device.");
+        }
+    };
+
+    // --- RE-USE PREVIOUS SCRIPTS (Sound, Light, Angle) ---
+    const dbDisplay = document.getElementById('db-value');
+    const canvas = document.getElementById('audio-visualizer');
+    const ctx = canvas.getContext('2d');
+    document.getElementById('start-audio').onclick = async () => {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const audioContext = new AudioContext();
+        const source = audioContext.createMediaStreamSource(stream);
+        const analyser = audioContext.createAnalyser();
+        analyser.fftSize = 256;
+        source.connect(analyser);
+        const dataArray = new Uint8Array(analyser.frequencyBinCount);
+        function updateAudio() {
+            analyser.getByteFrequencyData(dataArray);
+            let avg = dataArray.reduce((a,b) => a+b) / dataArray.length;
+            dbDisplay.innerText = `${Math.round(avg)} dB`;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = '#2563eb';
+            dataArray.forEach((val, i) => ctx.fillRect(i * 3, canvas.height - (val/2.5), 2, val/2.5));
+            requestAnimationFrame(updateAudio);
+        }
+        updateAudio();
+    };
+
+    document.getElementById('start-motion').onclick = () => {
+        const handle = (e) => {
+            let angle = Math.round(e.gamma);
+            document.getElementById('angle-value').innerText = `${angle}°`;
+            document.getElementById('inclinometer-visual').style.transform = `rotate(${angle}deg)`;
+        };
+        if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+            DeviceOrientationEvent.requestPermission().then(res => { if(res==='granted') window.addEventListener('deviceorientation', handle); });
+        } else { window.addEventListener('deviceorientation', handle); }
+    };
+
+    document.getElementById('start-light').onclick = async () => {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+        const video = document.getElementById('video-ref');
+        video.srcObject = stream;
+        const tempCanvas = document.createElement('canvas');
+        const tCtx = tempCanvas.getContext('2d');
+        setInterval(() => {
+            tCtx.drawImage(video, 0, 0, 10, 10);
+            const data = tCtx.getImageData(0, 0, 10, 10).data;
+            let brightness = 0;
+            for(let i=0; i<data.length; i+=4) brightness += (data[i] + data[i+1] + data[i+2]) / 3;
+            document.getElementById('light-value').innerText = `${Math.round((brightness/25)/255*100)}%`;
+        }, 500);
+    };
+</script>
+
+</body>
+</html>

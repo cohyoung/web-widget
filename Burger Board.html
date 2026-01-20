@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>In-N-Out AAC Order Helper</title>
+    <style>
+        :root {
+            --ino-red: #D52B1E;
+            --ino-yellow: #FFC72C;
+            --dark-text: #333;
+            --light-bg: #fdfdfd;
+            --btn-border: #b8b8b8;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--light-bg);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            box-sizing: border-box;
+        }
+
+        /* --- Header & Sentence Strip --- */
+        header {
+            text-align: center;
+            margin-bottom: 15px;
+        }
+
+        h1 {
+            color: var(--ino-red);
+            margin: 0 0 10px 0;
+            font-size: 1.5rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        #sentence-strip {
+            background-color: white;
+            border: 3px solid var(--ino-red);
+            border-radius: 12px;
+            padding: 15px;
+            min-height: 60px;
+            display: flex;
+            align-items: center;
+            font-size: 1.4rem;
+            font-weight: bold;
+            color: var(--dark-text);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .word-chip {
+            background-color: #eee;
+            padding: 5px 10px;
+            border-radius: 6px;
+            border: 1px solid #ccc;
+        }
+
+        /* --- Controls (Speak/Clear) --- */
+        .controls {
+            display: grid;
+            grid-template-columns: 3fr 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .action-btn {
+            border: none;
+            border-radius: 10px;
+            padding: 15px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.1s, opacity 0.2s;
+            text-transform: uppercase;
+        }
+
+        .action-btn:active {
+            transform: scale(0.98);
+        }
+
+        #speak-btn {
+            background-color: #28a745;
+            color: white;
+            grid-column: 1 / 2;
+        }
+
+        #undo-btn {
+            background-color: var(--ino-yellow);
+            color: var(--dark-text);
+        }
+
+        #clear-btn {
+            background-color: var(--ino-red);
+            color: white;
+        }
+
+        /* --- Category Tabs --- */
+        .tabs {
+            display: flex;
+            gap: 5px;
+            margin-bottom: 10px;
+            overflow-x: auto;
+            padding-bottom: 5px;
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 10px;
+            background: #ddd;
+            border: none;
+            border-radius: 8px 8px 0 0;
+            font-weight: bold;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+
+        .tab-btn.active {
+            background-color: var(--ino-red);
+            color: white;
+        }
+
+        /* --- Grid Layout for Items --- */
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 12px;
+            flex-grow: 1;
+            overflow-y: auto;
+            padding: 5px;
+        }
+
+        .aac-btn {
+            background-color: white;
+            border: 2px solid var(--btn-border);
+            border-radius: 12px;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            transition: background-color 0.2s;
+            min-height: 100px;
+        }
+
+        .aac-btn:active {
+            background-color: #e6f7ff;
+            border-color: #007bff;
+        }
+
+        .aac-btn img {
+            width: 50px;
+            height: 50px;
+            margin-bottom: 8px;
+            object-fit: contain;
+        }
+
+        .aac-btn span {
+            font-size: 1.1rem;
+            font-weight: 600;
+            line-height: 1.2;
+            color: var(--dark-text);
+        }
+
+        /* Category specific borders for visual distinction */
+        .cat-burgers { border-bottom: 4px solid #A0522D; }
+        .cat-mods { border-bottom: 4px solid #800080; }
+        .cat-sides { border-bottom: 4px solid #FFC72C; }
+        .cat-drinks { border-bottom: 4px solid #007bff; }
+        .cat-social { border-bottom: 4px solid #28a745; }
+
+        /* Hidden class for filtering */
+        .hidden { display: none; }
+
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Burger Order Helper</h1>
+    </header>
+
+    <div id="sentence-strip" aria-live="polite" aria-label="Current Order">
+        <span style="color: #888; font-style: italic;" id="placeholder-text">Build your order...</span>
+    </div>
+
+    <div class="controls">
+        <button id="speak-btn" class="action-btn">🔊 Speak Order</button>
+        <button id="undo-btn" class="action-btn">↶ Undo</button>
+        <button id="clear-btn" class="action-btn">✖ Clear</button>
+    </div>
+
+    <div class="tabs">
+        <button class="tab-btn active" onclick="filterCategory('all')">All</button>
+        <button class="tab-btn" onclick="filterCategory('burgers')">Burgers</button>
+        <button class="tab-btn" onclick="filterCategory('mods')">Custom</button>
+        <button class="tab-btn" onclick="filterCategory('sides')">Fries/Sides</button>
+        <button class="tab-btn" onclick="filterCategory('drinks')">Drinks</button>
+        <button class="tab-btn" onclick="filterCategory('social')">Chat</button>
+    </div>
+
+    <div class="grid-container" id="aac-grid">
+        <button class="aac-btn cat-burgers" data-cat="burgers" onclick="addWord('I would like a Double-Double')">
+            <span>🍔 Double-Double</span>
+        </button>
+        <button class="aac-btn cat-burgers" data-cat="burgers" onclick="addWord('I would like a Cheeseburger')">
+            <span>🍔 Cheeseburger</span>
+        </button>
+        <button class="aac-btn cat-burgers" data-cat="burgers" onclick="addWord('I would like a Hamburger')">
+            <span>🍔 Hamburger</span>
+        </button>
+        <button class="aac-btn cat-burgers" data-cat="burgers" onclick="addWord('I would like a 3 by 3')">
+            <span>🍔 3x3</span>
+        </button>
+        <button class="aac-btn cat-burgers" data-cat="burgers" onclick="addWord('I would like a 4 by 4')">
+            <span>🍔 4x4</span>
+        </button>
+        <button class="aac-btn cat-burgers" data-cat="burgers" onclick="addWord('I would like a Grilled Cheese')">
+            <span>🥪 Grilled Cheese</span>
+        </button>
+        <button class="aac-btn cat-burgers" data-cat="burgers" onclick="addWord('I would like a Flying Dutchman')">
+            <span>🥩 Flying Dutchman</span>
+        </button>
+
+        <button class="aac-btn cat-mods" data-cat="mods" onclick="addWord('Animal Style')">
+            <span>🦁 Animal Style</span>
+        </button>
+        <button class="aac-btn cat-mods" data-cat="mods" onclick="addWord('Protein Style')">
+            <span>🥬 Protein Style</span>
+        </button>
+        <button class="aac-btn cat-mods" data-cat="mods" onclick="addWord('with Whole Grilled Onions')">
+            <span>🧅 Whole Grilled Onion</span>
+        </button>
+        <button class="aac-btn cat-mods" data-cat="mods" onclick="addWord('with Chopped Chilis')">
+            <span>🌶️ Chopped Chilis</span>
+        </button>
+        <button class="aac-btn cat-mods" data-cat="mods" onclick="addWord('No Onions')">
+            <span>🚫 No Onions</span>
+        </button>
+        <button class="aac-btn cat-mods" data-cat="mods" onclick="addWord('Extra Toast on the bun')">
+            <span>🍞 Extra Toast</span>
+        </button>
+        <button class="aac-btn cat-mods" data-cat="mods" onclick="addWord('Mustard Fried')">
+            <span>🌭 Mustard Fried</span>
+        </button>
+        <button class="aac-btn cat-mods" data-cat="mods" onclick="addWord('Cut in half')">
+            <span>🔪 Cut in Half</span>
+        </button>
+
+        <button class="aac-btn cat-sides" data-cat="sides" onclick="addWord('and an order of Fries')">
+            <span>🍟 Fries</span>
+        </button>
+        <button class="aac-btn cat-sides" data-cat="sides" onclick="addWord('and Animal Style Fries')">
+            <span>🍟🦁 Animal Fries</span>
+        </button>
+        <button class="aac-btn cat-sides" data-cat="sides" onclick="addWord('Fries Light Well')">
+            <span>🍟🔥 Fries Light-Well</span>
+        </button>
+        <button class="aac-btn cat-sides" data-cat="sides" onclick="addWord('Fries Well Done')">
+            <span>🍟🔥🔥 Fries Well-Done</span>
+        </button>
+
+        <button class="aac-btn cat-drinks" data-cat="drinks" onclick="addWord('and a Chocolate Shake')">
+            <span>🍫 Choco Shake</span>
+        </button>
+        <button class="aac-btn cat-drinks" data-cat="drinks" onclick="addWord('and a Strawberry Shake')">
+            <span>🍓 Strawb Shake</span>
+        </button>
+        <button class="aac-btn cat-drinks" data-cat="drinks" onclick="addWord('and a Vanilla Shake')">
+            <span>🍦 Vanilla Shake</span>
+        </button>
+        <button class="aac-btn cat-drinks" data-cat="drinks" onclick="addWord('and a Neapolitan Shake')">
+            <span>🍨 Neapolitan Shake</span>
+        </button>
+        <button class="aac-btn cat-drinks" data-cat="drinks" onclick="addWord('and a Medium Coke')">
+            <span>🥤 Coke</span>
+        </button>
+        <button class="aac-btn cat-drinks" data-cat="drinks" onclick="addWord('and a Medium Diet Coke')">
+            <span>🥤 Diet Coke</span>
+        </button>
+        <button class="aac-btn cat-drinks" data-cat="drinks" onclick="addWord('and a Pink Lemonade')">
+            <span>🍋 Pink Lemonade</span>
+        </button>
+
+        <button class="aac-btn cat-social" data-cat="social" onclick="addWord('For here, please')">
+            <span>🍽️ For Here</span>
+        </button>
+        <button class="aac-btn cat-social" data-cat="social" onclick="addWord('To go, please')">
+            <span>🚗 To Go</span>
+        </button>
+        <button class="aac-btn cat-social" data-cat="social" onclick="addWord('Eat in the car')">
+            <span>🚘 Eat in Car</span>
+        </button>
+        <button class="aac-btn cat-social" data-cat="social" onclick="addWord('Thank you')">
+            <span>👍 Thank You</span>
+        </button>
+        <button class="aac-btn cat-social" data-cat="social" onclick="addWord('How much is it?')">
+            <span>💲 How much?</span>
+        </button>
+    </div>
+
+    <script>
+        // State to hold the current sentence parts
+        let sentenceQueue = [];
+        const synth = window.speechSynthesis;
+
+        // Add a word/phrase to the queue
+        function addWord(phrase) {
+            sentenceQueue.push(phrase);
+            updateDisplay();
+            
+            // Optional: Speak the button pressed immediately (auditory feedback)
+            // Uncomment next line if you want immediate feedback on every click
+            // speakText(phrase); 
+        }
+
+        // Update the visual sentence strip
+        function updateDisplay() {
+            const container = document.getElementById('sentence-strip');
+            const placeholder = document.getElementById('placeholder-text');
+            
+            if (sentenceQueue.length === 0) {
+                container.innerHTML = '';
+                container.appendChild(placeholder);
+                placeholder.style.display = 'inline';
+            } else {
+                container.innerHTML = '';
+                sentenceQueue.forEach((phrase) => {
+                    const chip = document.createElement('div');
+                    chip.className = 'word-chip';
+                    chip.textContent = phrase;
+                    container.appendChild(chip);
+                });
+            }
+        }
+
+        // Speak the full sentence
+        document.getElementById('speak-btn').addEventListener('click', () => {
+            if (sentenceQueue.length === 0) return;
+            const fullText = sentenceQueue.join(' ');
+            speakText(fullText);
+        });
+
+        // Undo last item
+        document.getElementById('undo-btn').addEventListener('click', () => {
+            sentenceQueue.pop();
+            updateDisplay();
+        });
+
+        // Clear all
+        document.getElementById('clear-btn').addEventListener('click', () => {
+            sentenceQueue = [];
+            updateDisplay();
+        });
+
+        // Text-to-Speech Helper
+        function speakText(text) {
+            if (synth.speaking) {
+                console.error('speechSynthesis.speaking');
+                return;
+            }
+            if (text !== '') {
+                const utterThis = new SpeechSynthesisUtterance(text);
+                utterThis.onend = function (event) {
+                    console.log('SpeechSynthesisUtterance.onend');
+                }
+                utterThis.onerror = function (event) {
+                    console.error('SpeechSynthesisUtterance.onerror');
+                }
+                // Attempt to pick a decent English voice
+                const voices = synth.getVoices();
+                const enVoice = voices.find(v => v.lang.includes('en'));
+                if(enVoice) utterThis.voice = enVoice;
+                
+                utterThis.pitch = 1;
+                utterThis.rate = 1;
+                synth.speak(utterThis);
+            }
+        }
+
+        // Filtering Categories
+        function filterCategory(category) {
+            const buttons = document.querySelectorAll('.aac-btn');
+            const tabs = document.querySelectorAll('.tab-btn');
+
+            // Update Active Tab
+            tabs.forEach(tab => tab.classList.remove('active'));
+            // Find the button that called this (approximated by text content matching logic or event target if passed)
+            // For simplicity, we just highlight the clicked tab in UI if we had the event, 
+            // but here we just blindly clear active and let the user see the content change.
+            // (In a full app we'd pass 'this' or ID).
+            
+            buttons.forEach(btn => {
+                if (category === 'all') {
+                    btn.classList.remove('hidden');
+                } else {
+                    if (btn.dataset.cat === category) {
+                        btn.classList.remove('hidden');
+                    } else {
+                        btn.classList.add('hidden');
+                    }
+                }
+            });
+        }
+        
+        // Ensure voices are loaded (Chrome quirk)
+        window.speechSynthesis.onvoiceschanged = function() {
+            window.speechSynthesis.getVoices();
+        };
+
+        // Add visual active state to tabs manually for this demo
+        const tabButtons = document.querySelectorAll('.tab-btn');
+        tabButtons.forEach(btn => {
+            btn.addEventListener('click', function() {
+                tabButtons.forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+            });
+        });
+
+    </script>
+</body>
+</html>

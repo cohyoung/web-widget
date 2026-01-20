@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Symbol Accentuation Toolkit</title>
+    <style>
+        body {
+            font-family: 'Georgia', serif;
+            background-color: #f0f2f5;
+            padding: 40px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            color: #2d3436;
+        }
+
+        h1 { margin-bottom: 10px; }
+        .directions {
+            max-width: 600px;
+            text-align: center;
+            margin-bottom: 30px;
+            line-height: 1.5;
+            color: #636e72;
+        }
+
+        .input-panel {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            margin-bottom: 40px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .transition-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 20px;
+            max-width: 1200px;
+            width: 100%;
+            margin-bottom: 20px;
+        }
+
+        .frame-card {
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 15px;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .image-container {
+            position: relative;
+            width: 100%;
+            height: 160px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            background: #fff;
+            border: 1px solid #eee;
+        }
+
+        .image-container img {
+            position: absolute;
+            max-width: 90%;
+            max-height: 90%;
+            object-fit: contain;
+        }
+
+        .word-overlay {
+            position: absolute;
+            font-weight: bold;
+            font-size: 2rem;
+            z-index: 2;
+            white-space: pre;
+        }
+
+        /* Slideshow Section */
+        .slideshow-section {
+            margin-top: 40px;
+            width: 100%;
+            max-width: 600px;
+            text-align: center;
+            display: none;
+        }
+
+        .slide-viewer {
+            position: relative;
+            width: 100%;
+            height: 400px;
+            background: white;
+            border: 3px solid #2d3436;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            margin: 20px 0;
+            cursor: pointer;
+        }
+
+        .slide-frame {
+            position: absolute;
+            display: none;
+            width: 100%; height: 100%;
+            align-items: center; justify-content: center;
+        }
+
+        .slide-frame.active { display: flex; }
+        .slide-frame img { max-width: 80%; max-height: 80%; position: absolute; }
+        .slide-frame .word-text { font-size: 6rem; font-weight: bold; z-index: 2; white-space: pre; }
+
+        button {
+            padding: 10px 15px;
+            background: #2d3436;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        button.primary { font-size: 1rem; padding: 12px 20px; }
+        button.secondary { background: #0984e3; }
+        button.export { background: #27ae60; }
+        button.step-dl { font-size: 0.75rem; background: #27ae60; }
+
+        input[type="text"], input[type="number"] {
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+        }
+
+        #exportCanvas { display: none; }
+
+        @media print {
+            .input-panel, .slideshow-section, button, .directions, h3 { display: none !important; }
+            body { background: white; padding: 0; }
+            .transition-grid { grid-template-columns: repeat(3, 1fr); }
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Symbol Accentuation</h1>
+    <p class="directions">
+        Directions: Upload an image, enter the word that you would like the image to transform into, then select how many transformations you want there to be.
+    </p>
+
+    <div class="input-panel">
+        <input type="file" id="imageInput" accept="image/*">
+        <input type="text" id="textInput" placeholder="Enter word...">
+        <label>Steps (3-10):</label>
+        <input type="number" id="stepCount" min="3" max="10" value="5">
+        <button class="primary" onclick="generateAll()">Generate Transitions</button>
+    </div>
+
+    <div class="transition-grid" id="gridContainer"></div>
+
+    <div style="text-align:center; width: 100%;">
+        <button id="printBtn" class="secondary" style="display:none; margin: 20px auto;" onclick="window.print()">Print Worksheet</button>
+    </div>
+
+    <div class="slideshow-section" id="slideshowSection">
+        <hr>
+        <h3>Interactive Slideshow</h3>
+        <p>Click the viewer below to play the transition.</p>
+        <div class="slide-viewer" id="slideViewer" onclick="togglePlay()">
+            </div>
+        <p id="slideStatus">Step: 1</p>
+        <div style="margin-top: 20px;">
+            <button class="export" onclick="downloadVideo()">Download Video</button>
+        </div>
+    </div>
+
+    <canvas id="exportCanvas" width="800" height="600"></canvas>
+
+    <script>
+        let baseImageData = "";
+        let isPlaying = false;
+        let playInterval;
+        let currentSlide = 0;
+        let totalSteps = 0;
+
+        document.getElementById('imageInput').addEventListener('change', function(e) {
+            const reader = new FileReader();
+            reader.onload = (event) => baseImageData = event.target.result;
+            reader.readAsDataURL(e.target.files[0]);
+        });
+
+        function generateAll() {
+            const word = document.getElementById('textInput').value;
+            totalSteps = parseInt(document.getElementById('stepCount').value);
+            
+            if (!baseImageData || !word) return alert("Please upload an image and type a word first.");
+
+            renderGrid(word, totalSteps);
+            renderSlideshow(word, totalSteps);
+            
+            document.getElementById('printBtn').style.display = "inline-block";
+            document.getElementById('slideshowSection').style.display = "block";
+        }
+
+        function renderGrid(word, steps) {
+            const container = document.getElementById('gridContainer');
+            container.innerHTML = "";
+            for (let i = 0; i < steps; i++) {
+                const progress = i / (steps - 1);
+                const card = document.createElement('div');
+                card.className = 'frame-card';
+
+                card.innerHTML = `
+                    <div style="font-weight:bold">Step ${i+1}</div>
+                    <div class="image-container">
+                        <img src="${baseImageData}" style="opacity: ${1-progress}; filter: blur(${progress * 10}px)">
+                        <div class="word-overlay" style="opacity: ${progress}; transform: scale(${0.6 + progress * 0.4})">${word}</div>
+                    </div>
+                    <button class="step-dl" onclick="downloadSingleStep(${i})">Download This Image</button>
+                `;
+                container.appendChild(card);
+            }
+        }
+
+        function renderSlideshow(word, steps) {
+            const viewer = document.getElementById('slideViewer');
+            viewer.innerHTML = "";
+            currentSlide = 0;
+            isPlaying = false;
+            clearInterval(playInterval);
+
+            for (let i = 0; i < steps; i++) {
+                const progress = i / (steps - 1);
+                const frame = document.createElement('div');
+                frame.className = `slide-frame ${i === 0 ? 'active' : ''}`;
+                frame.innerHTML = `
+                    <img src="${baseImageData}" style="opacity: ${1-progress}; filter: blur(${progress * 15}px)">
+                    <div class="word-text" style="opacity: ${progress}; transform: scale(${0.7 + progress*0.3})">${word}</div>
+                `;
+                viewer.appendChild(frame);
+            }
+            updateSlideStatus();
+        }
+
+        function togglePlay() {
+            if (isPlaying) {
+                clearInterval(playInterval);
+                isPlaying = false;
+            } else {
+                isPlaying = true;
+                currentSlide = 0;
+                playInterval = setInterval(() => {
+                    currentSlide = (currentSlide + 1) % totalSteps;
+                    updateSlideView();
+                    if (currentSlide === 0) { clearInterval(playInterval); isPlaying = false; }
+                }, 600);
+            }
+        }
+
+        function updateSlideView() {
+            const slides = document.querySelectorAll('.slide-frame');
+            slides.forEach((s, i) => s.classList.toggle('active', i === currentSlide));
+            updateSlideStatus();
+        }
+
+        function updateSlideStatus() {
+            document.getElementById('slideStatus').textContent = `Step: ${currentSlide + 1} of ${totalSteps}`;
+        }
+
+        // --- BAKE & EXPORT LOGIC ---
+
+        async function drawToCanvas(ctx, stepIndex, total, word, img) {
+            const canvas = ctx.canvas;
+            const progress = stepIndex / (total - 1);
+            ctx.fillStyle = "white";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            ctx.save();
+            ctx.globalAlpha = 1 - progress;
+            if (progress > 0) ctx.filter = `blur(${progress * 15}px)`;
+            const scale = Math.min(canvas.width * 0.8 / img.width, canvas.height * 0.8 / img.height);
+            ctx.drawImage(img, (canvas.width - img.width * scale)/2, (canvas.height - img.height * scale)/2, img.width * scale, img.height * scale);
+            ctx.restore();
+
+            ctx.save();
+            ctx.globalAlpha = progress;
+            ctx.fillStyle = "black";
+            ctx.font = `bold ${110 * (0.7 + progress * 0.3)}px Georgia`;
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillText(word, canvas.width / 2, canvas.height / 2);
+            ctx.restore();
+        }
+
+        async function downloadSingleStep(index) {
+            const canvas = document.getElementById('exportCanvas');
+            const ctx = canvas.getContext('2d');
+            const word = document.getElementById('textInput').value;
+            const img = new Image();
+            img.src = baseImageData;
+            await img.decode();
+
+            await drawToCanvas(ctx, index, totalSteps, word, img);
+            const link = document.createElement('a');
+            link.download = `step-${index+1}.png`;
+            link.href = canvas.toDataURL("image/png");
+            link.click();
+        }
+
+        async function downloadVideo() {
+            alert("Preparing video... please wait.");
+            const canvas = document.getElementById('exportCanvas');
+            const ctx = canvas.getContext('2d');
+            const word = document.getElementById('textInput').value;
+            const img = new Image();
+            img.src = baseImageData;
+            await img.decode();
+
+            const stream = canvas.captureStream(30);
+            const recorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
+            const chunks = [];
+            recorder.ondataavailable = e => chunks.push(e.data);
+            recorder.onstop = () => {
+                const blob = new Blob(chunks, { type: 'video/webm' });
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(blob);
+                a.download = 'symbol-accentuation.webm';
+                a.click();
+            };
+
+            recorder.start();
+            for (let i = 0; i < totalSteps; i++) {
+                await drawToCanvas(ctx, i, totalSteps, word, img);
+                await new Promise(r => setTimeout(r, 600));
+            }
+            await new Promise(r => setTimeout(r, 1000));
+            recorder.stop();
+        }
+    </script>
+</body>
+</html>

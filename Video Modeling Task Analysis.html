@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video Modeling Task Analysis</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        :root { --primary: #4a90e2; --danger: #e74c3c; --bg: #f8f9fa; --success: #2ecc71; --sidebar-bg: #ffffff; }
+        body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); margin: 0; display: flex; height: 100vh; color: #333; overflow: hidden; }
+        
+        /* Sidebar Layout */
+        #sidebar { width: 340px; background: var(--sidebar-bg); border-right: 1px solid #ddd; display: flex; flex-direction: column; }
+        .sidebar-header { padding: 20px; border-bottom: 1px solid #eee; }
+        #step-list { flex-grow: 1; overflow-y: auto; padding: 15px; background: #fdfdfd; }
+        .sidebar-footer { padding: 15px; border-top: 1px solid #eee; background: #f8f9fa; display: flex; flex-direction: column; gap: 10px; }
+        
+        /* Step Thumbnails */
+        .step-thumb { 
+            position: relative; width: 100%; margin-bottom: 20px; border: 3px solid transparent; 
+            border-radius: 10px; cursor: pointer; transition: 0.2s; background: #fff; overflow: hidden; box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+        .step-thumb.active { border-color: var(--primary); transform: scale(1.02); box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
+        .step-thumb img { width: 100%; display: block; }
+        .step-thumb .label { padding: 8px; font-size: 13px; font-weight: 600; background: #fff; border-top: 1px solid #eee; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        
+        .delete-btn { 
+            position: absolute; top: 5px; right: 5px; background: var(--danger); 
+            color: white; border: none; border-radius: 50%; width: 22px; height: 22px; 
+            cursor: pointer; font-weight: bold; display: none; z-index: 5;
+        }
+        .step-thumb:hover .delete-btn { display: block; }
+
+        /* Main Content */
+        #main-content { flex-grow: 1; display: flex; flex-direction: column; padding: 20px 40px; align-items: center; overflow-y: auto; }
+        .slide-stage { background: white; width: 100%; max-width: 850px; padding: 30px; border-radius: 20px; box-shadow: 0 10px 40px rgba(0,0,0,0.08); }
+        
+        /* Empty State Styles */
+        .placeholder { text-align: center; max-width: 600px; margin-top: 80px; background: white; padding: 40px; border-radius: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); }
+        .directions-text { line-height: 1.6; color: #4a5568; margin-bottom: 25px; font-size: 16px; }
+
+        .title-edit-area { margin-bottom: 15px; }
+        .step-title-input { width: 100%; font-size: 24px; font-weight: bold; border: none; border-bottom: 2px solid #eee; padding: 5px 0; color: var(--primary); outline: none; }
+        video { width: 100%; border-radius: 12px; background: #000; }
+        
+        .description-area { margin: 20px 0; }
+        .step-desc-input { width: 100%; height: 80px; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-family: inherit; font-size: 15px; resize: none; outline: none; box-sizing: border-box; }
+
+        /* Buttons */
+        .btn { padding: 12px 15px; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; transition: 0.2s; font-size: 14px; text-align: center; }
+        .btn-pdf { background: #4a5568; color: white; width: 100%; }
+        .btn-capture { background: var(--success); color: white; width: 100%; font-size: 16px; margin-bottom: 10px; }
+        .btn-nav { background: #edf2f7; color: #4a5568; width: 120px; }
+        .btn:hover:not(:disabled) { opacity: 0.9; transform: translateY(-1px); }
+        .btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+        .nav-row { display: flex; justify-content: space-between; margin-top: 20px; padding-top: 20px; border-top: 1px solid #eee; }
+    </style>
+</head>
+<body>
+
+<div id="sidebar">
+    <div class="sidebar-header">
+        <h3 style="margin: 0; color: var(--primary); font-size: 18px;">Video Modeling Task Analysis</h3>
+    </div>
+    
+    <div id="step-list">
+        </div>
+
+    <div class="sidebar-footer" id="export-actions" style="display: none;">
+        <button class="btn btn-pdf" onclick="exportPDF(true)">📄 Save Current Step (PDF)</button>
+        <button class="btn btn-pdf" onclick="exportPDF(false)">📚 Save Full Analysis (PDF)</button>
+    </div>
+</div>
+
+<div id="main-content">
+    <div id="empty-state" class="placeholder">
+        <h2 style="color: var(--primary);">📂 Video Modeling Task Analysis Builder</h2>
+        <p class="directions-text">
+            <strong>Directions:</strong> Use this widget to take screenshots of different portions of the video in order to create a task analysis. 
+            Each screenshot, when clicked on, will load the specific time of the video where the screenshot was taken. Furthermore, each step of the task                        
+            analysis, or the entire task analysis itself, can then be saved as PDF. 
+            Begin by uploading a video.
+        </p>
+        <input type="file" id="videoUpload" accept="video/*">
+    </div>
+
+    <div class="slide-stage" id="editor-ui" style="display: none;">
+        <div class="title-edit-area">
+            <input type="text" id="stepTitleInput" class="step-title-input" placeholder="Step Title...">
+        </div>
+
+        <video id="mainVideo" controls></video>
+
+        <div class="description-area">
+            <label style="font-size: 11px; font-weight: bold; color: #a0aec0; text-transform: uppercase; letter-spacing: 1px;">Step Description</label>
+            <textarea id="stepDescInput" class="step-desc-input" placeholder="Add specific instructions for this step..."></textarea>
+        </div>
+
+        <button class="btn btn-capture" id="captureBtn">📸 Capture Next Step</button>
+
+        <div class="nav-row">
+            <button class="btn btn-nav" id="prevBtn" onclick="changeStep(-1)">← Previous</button>
+            <div id="timeInfo" style="font-size: 12px; color: #a0aec0; line-height: 40px;"></div>
+            <button class="btn btn-nav" id="nextBtn" onclick="changeStep(1)">Next →</button>
+        </div>
+    </div>
+</div>
+
+<canvas id="canvas" style="display:none;"></canvas>
+
+<script>
+    const { jsPDF } = window.jspdf;
+    const video = document.getElementById('mainVideo');
+    const stepList = document.getElementById('step-list');
+    const captureBtn = document.getElementById('captureBtn');
+    const titleInput = document.getElementById('stepTitleInput');
+    const descInput = document.getElementById('stepDescInput');
+    const canvas = document.getElementById('canvas');
+    const exportActions = document.getElementById('export-actions');
+    
+    let steps = []; 
+    let currentStepIndex = -1;
+
+    // Handle Upload
+    document.getElementById('videoUpload').addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            video.src = URL.createObjectURL(file);
+            steps = [];
+            
+            // Wait for video to be ready to capture the first frame
+            video.onloadedmetadata = () => {
+                document.getElementById('empty-state').style.display = 'none';
+                document.getElementById('editor-ui').style.display = 'block';
+                exportActions.style.display = 'flex';
+                
+                // Automatically Create Step 1 at 0:00
+                video.currentTime = 0;
+                // Tiny delay to ensure video seek is ready for capture
+                setTimeout(captureStep, 500);
+            };
+        }
+    });
+
+    function captureStep() {
+        const context = canvas.getContext('2d');
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        context.drawImage(video, 0, 0, canvas.width, canvas.height);
+        
+        const timestamp = video.currentTime;
+        const screenshot = canvas.toDataURL('image/jpeg', 0.8);
+
+        // Close previous step's timing
+        if (steps.length > 0) {
+            steps[steps.length - 1].endTime = timestamp;
+        }
+
+        const newStep = {
+            title: `Step ${steps.length + 1}`,
+            description: "",
+            startTime: timestamp,
+            endTime: video.duration,
+            image: screenshot
+        };
+
+        steps.push(newStep);
+        currentStepIndex = steps.length - 1;
+        renderUI();
+    }
+
+    captureBtn.addEventListener('click', captureStep);
+
+    titleInput.addEventListener('input', (e) => {
+        if (currentStepIndex !== -1) {
+            steps[currentStepIndex].title = e.target.value;
+            const label = document.querySelector(`.step-thumb[data-index="${currentStepIndex}"] .label`);
+            if (label) label.innerText = e.target.value;
+        }
+    });
+
+    descInput.addEventListener('input', (e) => {
+        if (currentStepIndex !== -1) steps[currentStepIndex].description = e.target.value;
+    });
+
+    video.addEventListener('timeupdate', () => {
+        if (currentStepIndex !== -1 && !video.paused) {
+            if (video.currentTime >= steps[currentStepIndex].endTime) {
+                video.pause();
+                video.currentTime = steps[currentStepIndex].endTime;
+            }
+        }
+    });
+
+    function deleteStep(index, event) {
+        event.stopPropagation();
+        steps.splice(index, 1);
+        if (index > 0 && steps.length > 0) {
+            steps[index - 1].endTime = (steps[index]) ? steps[index].startTime : video.duration;
+        }
+        currentStepIndex = Math.max(0, Math.min(currentStepIndex, steps.length - 1));
+        if (steps.length === 0) {
+            location.reload(); // Reset if all steps gone
+        } else {
+            renderUI();
+        }
+    }
+
+    function renderUI() {
+        stepList.innerHTML = '';
+        steps.forEach((step, index) => {
+            const div = document.createElement('div');
+            div.className = `step-thumb ${index === currentStepIndex ? 'active' : ''}`;
+            div.setAttribute('data-index', index);
+            div.onclick = () => selectStep(index);
+            div.innerHTML = `
+                <button class="delete-btn" onclick="deleteStep(${index}, event)">×</button>
+                <img src="${step.image}">
+                <div class="label">${step.title}</div>
+            `;
+            stepList.appendChild(div);
+        });
+
+        if (steps.length > 0) {
+            const current = steps[currentStepIndex];
+            titleInput.value = current.title;
+            descInput.value = current.description;
+            document.getElementById('timeInfo').innerText = `${formatTime(current.startTime)} - ${formatTime(current.endTime)}`;
+            document.getElementById('prevBtn').disabled = currentStepIndex === 0;
+            document.getElementById('nextBtn').disabled = currentStepIndex === steps.length - 1;
+        }
+    }
+
+    function selectStep(index) {
+        currentStepIndex = index;
+        renderUI();
+        video.currentTime = steps[index].startTime;
+        video.play();
+    }
+
+    function changeStep(direction) {
+        const newIndex = currentStepIndex + direction;
+        if (newIndex >= 0 && newIndex < steps.length) selectStep(newIndex);
+    }
+
+    function formatTime(s) { return new Date(s * 1000).toISOString().substr(14, 5); }
+
+    async function exportPDF(singleStepOnly) {
+        if (steps.length === 0) return;
+        const doc = new jsPDF();
+        const itemsToExport = singleStepOnly ? [steps[currentStepIndex]] : steps;
+
+        itemsToExport.forEach((step, i) => {
+            if (i > 0) doc.addPage();
+            doc.setFontSize(22);
+            doc.setTextColor(74, 144, 226);
+            doc.text(step.title, 20, 30);
+            doc.addImage(step.image, 'JPEG', 20, 40, 170, 95);
+            doc.setFontSize(12);
+            doc.setTextColor(100);
+            doc.text("Instructions:", 20, 150);
+            doc.setFontSize(14);
+            doc.setTextColor(50);
+            const splitDesc = doc.splitTextToSize(step.description || "No description provided.", 170);
+            doc.text(splitDesc, 20, 160);
+        });
+
+        doc.save(singleStepOnly ? `Step_Detail.pdf` : "Task_Analysis_Complete.pdf");
+    }
+</script>
+
+</body>
+</html>

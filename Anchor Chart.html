@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Anchor Chart Widget</title>
+    <link href="https://fonts.googleapis.com/css2?family=Patrick+Hand&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js"></script>
+    
+    <style>
+        :root {
+            --primary: #4A90E2;
+            --bg-color: #f0f2f5;
+            --toolbar-height: 90px;
+        }
+
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background-color: var(--bg-color);
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* --- Toolbar --- */
+        .toolbar {
+            height: var(--toolbar-height);
+            background: white;
+            border-bottom: 1px solid #ccc;
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            gap: 15px;
+            z-index: 100;
+            position: relative;
+        }
+
+        .brand {
+            font-family: 'Patrick Hand', cursive;
+            font-size: 1.5rem;
+            color: var(--primary);
+            font-weight: bold;
+            margin-right: 10px;
+            border-right: 2px solid #eee;
+            padding-right: 20px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+        }
+
+        .tool-group {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            height: 100%;
+            padding: 0 10px;
+            border-right: 1px solid #eee;
+        }
+
+        .tool-group-label {
+            font-size: 0.7rem;
+            color: #888;
+            text-align: center;
+            margin-top: 5px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .tool-row {
+            display: flex;
+            gap: 5px;
+            align-items: center;
+            justify-content: center;
+        }
+
+        button {
+            padding: 6px 10px;
+            border: 1px solid transparent;
+            background: transparent;
+            border-radius: 4px;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            font-size: 0.8rem;
+            color: #444;
+            transition: all 0.2s;
+            min-width: 50px;
+            position: relative;
+        }
+        
+        button i { font-style: normal; font-size: 1.2rem; margin-bottom: 2px; }
+        button:hover { background: #f0f4ff; color: var(--primary); }
+        button.active { background: #eef2ff; color: var(--primary); border: 1px solid var(--primary); }
+
+        button.save-btn { background: #27ae60; color: white; margin-left: auto; }
+        button.save-btn:hover { background: #219150; }
+
+        /* Dropdown & Popups */
+        .popup-menu {
+            display: none;
+            position: absolute;
+            top: 75px;
+            background: white;
+            border: 1px solid #ccc;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            padding: 10px;
+            border-radius: 8px;
+            z-index: 200;
+            gap: 8px;
+        }
+
+        .popup-menu.show { display: grid; }
+        
+        /* Specific dimensions */
+        #emoji-popup { grid-template-columns: repeat(8, 1fr); max-height: 200px; overflow-y: auto; width: 300px; left: 350px;}
+        
+        /* Updated Shape Popup Width */
+        #shape-popup { 
+            width: 260px; /* Increased width to prevent cutoff */
+            left: 600px; 
+            grid-template-columns: repeat(3, 1fr);
+        }
+
+        #arrow-popup { width: 140px; left: 720px; grid-template-columns: 1fr; }
+        #widget-popup { width: 160px; left: 520px; grid-template-columns: 1fr; }
+
+        .popup-item {
+            padding: 8px;
+            border: 1px solid #eee;
+            border-radius: 4px;
+            cursor: pointer;
+            text-align: center;
+            font-size: 1.2rem;
+        }
+        .popup-item:hover { background: #f0f0f0; }
+        .popup-item span { display: block; font-size: 0.7rem; margin-top: 2px; color: #666; }
+
+        /* Custom Color Dropdown */
+        select#color-select {
+            padding: 5px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+            cursor: pointer;
+        }
+
+        /* --- Workspace --- */
+        .workspace {
+            flex: 1;
+            background-color: #e0e0e0;
+            display: flex;
+            justify-content: center;
+            padding: 40px;
+            overflow: auto;
+            position: relative;
+        }
+
+        .canvas-container-outer {
+            background: white;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            transform-origin: center top;
+            transition: transform 0.2s ease;
+        }
+
+        /* Zoom Controls */
+        .zoom-controls {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255, 255, 255, 0.9);
+            padding: 8px 15px;
+            border-radius: 30px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            z-index: 500;
+            border: 1px solid #ccc;
+        }
+
+        .zoom-btn {
+            background: none; border: none; font-size: 1.2rem; cursor: pointer; padding: 0 5px; min-width: auto;
+        }
+        .zoom-level { font-size: 0.9rem; font-weight: bold; width: 50px; text-align: center; }
+
+    </style>
+</head>
+<body>
+
+    <div class="toolbar">
+        <div class="brand">Anchor Chart Widget</div>
+
+        <div class="tool-group">
+            <div class="tool-row">
+                <button id="btn-draw" class="active" onclick="setMode('draw')"><i>✏️</i> Draw</button>
+                <button id="btn-pointer" onclick="setMode('pointer')"><i>🖱️</i> Select</button>
+            </div>
+            <span class="tool-group-label">Modes</span>
+        </div>
+
+        <div class="tool-group">
+            <div class="tool-row" style="margin-bottom: 5px;">
+                <select id="color-select" onchange="setColor(this.value)">
+                    <option value="#333333">⚫ Black</option>
+                    <option value="#e74c3c">🔴 Red</option>
+                    <option value="#3498db">🔵 Blue</option>
+                    <option value="#27ae60">🟢 Green</option>
+                    <option value="#f1c40f">🟡 Yellow</option>
+                    <option value="#9b59b6">🟣 Purple</option>
+                    <option value="#e67e22">🟠 Orange</option>
+                    <option value="#ffffff">⚪ White</option>
+                    <option value="transparent">🚫 No Fill</option>
+                </select>
+            </div>
+            <div class="tool-row">
+                <span style="font-size: 10px;">Size:</span>
+                <input type="range" id="brush-size" min="1" max="30" value="3" style="width: 80px;">
+            </div>
+            <span class="tool-group-label">Style</span>
+        </div>
+
+        <div class="tool-group">
+            <div class="tool-row">
+                <button onclick="addText('Title')"><i>T</i> Header</button>
+                <button onclick="addText('Body')"><i>t</i> Text</button>
+                <button onclick="togglePopup('emoji-popup')"><i>🙂</i> Emojis</button>
+                <button onclick="addStickyNote()"><i>🟨</i> Note</button>
+            </div>
+            <span class="tool-group-label">Text</span>
+        </div>
+
+        <div class="tool-group">
+            <div class="tool-row">
+                <button onclick="togglePopup('widget-popup')"><i>📐</i> Widgets</button>
+                <button onclick="togglePopup('shape-popup')"><i>🔷</i> Shapes</button>
+                <button onclick="togglePopup('arrow-popup')"><i>➡️</i> Arrows</button>
+            </div>
+            <span class="tool-group-label">Objects</span>
+        </div>
+
+        <div class="tool-group">
+            <div class="tool-row">
+                <button onclick="deleteSelected()" style="color: #c0392b;"><i>🗑️</i> Del</button>
+                <button onclick="clearCanvas()"><i>❌</i> Clear</button>
+            </div>
+            <span class="tool-group-label">Edit</span>
+        </div>
+
+        <button class="save-btn" onclick="downloadChart()"><i>💾</i> Save</button>
+    </div>
+
+    <div id="emoji-popup" class="popup-menu"></div>
+    
+    <div id="shape-popup" class="popup-menu">
+        <div class="popup-item" onclick="addRect()">⬜<span>Square</span></div>
+        <div class="popup-item" onclick="addCircle()">⚪<span>Circle</span></div>
+        <div class="popup-item" onclick="addTriangle()">🔺<span>Triangle</span></div>
+        <div class="popup-item" onclick="addPoly(5)">⬠<span>Pentagon</span></div>
+        <div class="popup-item" onclick="addPoly(6)">⬡<span>Hexagon</span></div>
+        <div class="popup-item" onclick="addStar()">⭐<span>Star</span></div>
+        <div class="popup-item" onclick="addCloud()">☁️<span>Cloud</span></div>
+    </div>
+
+    <div id="arrow-popup" class="popup-menu">
+        <div class="popup-item" onclick="addArrow('simple')">➡️<span>Simple</span></div>
+        <div class="popup-item" onclick="addArrow('thick')">➤<span>Thick</span></div>
+        <div class="popup-item" onclick="addArrow('double')">↔️<span>Double</span></div>
+        <div class="popup-item" onclick="addArrow('curved')">⤵️<span>Curved</span></div>
+    </div>
+
+    <div id="widget-popup" class="popup-menu">
+        <div class="popup-item" onclick="addVenn()">🔵<span>Venn Diagram</span></div>
+        <div class="popup-item" onclick="addTChart()">📊<span>T-Chart</span></div>
+        <div class="popup-item" onclick="addNumLine()">📏<span>Number Line</span></div>
+    </div>
+
+    <div class="workspace" id="workspace">
+        <div class="canvas-container-outer" id="canvas-wrapper">
+            <canvas id="c" width="850" height="1100"></canvas>
+        </div>
+    </div>
+
+    <div class="zoom-controls">
+        <button class="zoom-btn" onclick="zoom(-0.1)">➖</button>
+        <span class="zoom-level" id="zoom-text">100%</span>
+        <button class="zoom-btn" onclick="zoom(0.1)">➕</button>
+        <button class="zoom-btn" style="font-size:0.8rem; margin-left:10px;" onclick="zoomReset()">Reset</button>
+    </div>
+
+    <script>
+        // 1. Setup Canvas
+        const canvas = new fabric.Canvas('c', { backgroundColor: '#ffffff' });
+        
+        function drawBackground() {
+            const width = canvas.width;
+            const height = canvas.height;
+            const lines = [];
+            // Margin
+            lines.push(new fabric.Line([60, 0, 60, height], { stroke: 'pink', strokeWidth: 2, selectable: false, evented: false }));
+            // Lined Paper
+            for (let i = 100; i < height; i += 40) {
+                lines.push(new fabric.Line([0, i, width, i], { stroke: '#a2d5f2', strokeWidth: 1, selectable: false, evented: false }));
+            }
+            const group = new fabric.Group(lines, { selectable: false, evented: false });
+            canvas.add(group);
+            canvas.sendToBack(group);
+        }
+        drawBackground();
+
+        let brushColor = '#333';
+
+        // 2. Modes
+        function setMode(mode) {
+            document.querySelectorAll('.toolbar button').forEach(b => b.classList.remove('active'));
+            if(mode === 'pointer') {
+                document.getElementById('btn-pointer').classList.add('active');
+                canvas.isDrawingMode = false;
+            } else {
+                document.getElementById('btn-draw').classList.add('active');
+                canvas.isDrawingMode = true;
+                canvas.freeDrawingBrush.color = brushColor;
+                canvas.freeDrawingBrush.width = parseInt(document.getElementById('brush-size').value);
+                canvas.discardActiveObject();
+                canvas.requestRenderAll();
+            }
+            closeAllPopups();
+        }
+
+        // 3. Color System
+        function setColor(color) {
+            brushColor = color;
+            canvas.freeDrawingBrush.color = color;
+            const activeObj = canvas.getActiveObject();
+            if (activeObj) {
+                if (['rect', 'circle', 'triangle', 'path', 'polygon'].includes(activeObj.type)) {
+                     activeObj.set('fill', color);
+                } else if (['i-text', 'text'].includes(activeObj.type)) {
+                    activeObj.set('fill', color);
+                }
+                canvas.renderAll();
+            }
+        }
+
+        document.getElementById('brush-size').addEventListener('input', function() {
+            canvas.freeDrawingBrush.width = parseInt(this.value, 10) || 1;
+        });
+
+        // 4. Shapes Logic
+        function addShape(shape) {
+            setMode('pointer');
+            shape.set({ left: canvas.width/2 - 50, top: 200, fill: brushColor, stroke: 'black', strokeWidth: 2 });
+            canvas.add(shape);
+            canvas.setActiveObject(shape);
+            closeAllPopups();
+        }
+
+        function addRect() { addShape(new fabric.Rect({ width: 100, height: 100 })); }
+        function addCircle() { addShape(new fabric.Circle({ radius: 50 })); }
+        function addTriangle() { addShape(new fabric.Triangle({ width: 100, height: 100 })); }
+        
+        function addPoly(sides) { 
+            const points = [];
+            for (let i = 0; i < sides; i++) {
+                points.push({
+                    x: 50 * Math.cos(i * 2 * Math.PI / sides),
+                    y: 50 * Math.sin(i * 2 * Math.PI / sides)
+                });
+            }
+            addShape(new fabric.Polygon(points, { }));
+        }
+
+        function addStar() {
+            const star = new fabric.Path('M 0 0 L 10 30 L 40 30 L 15 50 L 25 80 L 0 60 L -25 80 L -15 50 L -40 30 L -10 30 Z');
+            star.set({ scaleX: 1.5, scaleY: 1.5 });
+            addShape(star);
+        }
+
+        function addCloud() {
+            const cloud = new fabric.Path('M 25,60 a 20,20 0 0,1 0,-40 a 25,25 0 0,1 50,0 a 20,20 0 0,1 0,40 z');
+            cloud.set({ scaleX: 2, scaleY: 2, strokeLineJoin: 'round' });
+            addShape(cloud);
+        }
+
+        // 5. Arrows
+        function addArrow(type) {
+            setMode('pointer');
+            let arrow;
+            if (type === 'simple') {
+                // Improved alignment: Triangle sits flush on the end of the line
+                const tri = new fabric.Triangle({ width: 20, height: 20, fill: brushColor, left: 110, top: 0, angle: 90 });
+                // Make line slightly thicker and center it vertically relative to the triangle
+                const line = new fabric.Rect({ left: 0, top: 7, width: 100, height: 6, fill: brushColor });
+                arrow = new fabric.Group([line, tri], { left: canvas.width/2, top: 200 });
+            } else if (type === 'thick') {
+                arrow = new fabric.Path('M 0 20 L 60 20 L 60 0 L 100 40 L 60 80 L 60 60 L 0 60 Z', { fill: brushColor });
+                arrow.set({ left: canvas.width/2, top: 200, scaleX: 0.8, scaleY: 0.8 });
+            } else if (type === 'double') {
+                const tri1 = new fabric.Triangle({ width: 20, height: 20, fill: brushColor, left: 110, top: 0, angle: 90 });
+                const tri2 = new fabric.Triangle({ width: 20, height: 20, fill: brushColor, left: -20, top: 20, angle: -90 });
+                const line = new fabric.Rect({ left: 0, top: 8, width: 100, height: 4, fill: brushColor });
+                arrow = new fabric.Group([tri2, line, tri1], { left: canvas.width/2, top: 200 });
+            } else if (type === 'curved') {
+                arrow = new fabric.Path('M 10 10 Q 90 10 90 90', { fill: '', stroke: brushColor, strokeWidth: 5 });
+                const tri = new fabric.Triangle({ width: 20, height: 20, fill: brushColor, left: 100, top: 110, angle: 180 });
+                arrow = new fabric.Group([arrow, tri], { left: canvas.width/2, top: 200 });
+            }
+            canvas.add(arrow);
+            closeAllPopups();
+        }
+
+        // 6. Educational Widgets
+        function addVenn() {
+            setMode('pointer');
+            const c1 = new fabric.Circle({ radius: 100, fill: 'rgba(231, 76, 60, 0.4)', left: 0, stroke: '#333', strokeWidth: 2 });
+            const c2 = new fabric.Circle({ radius: 100, fill: 'rgba(52, 152, 219, 0.4)', left: 120, stroke: '#333', strokeWidth: 2 });
+            const group = new fabric.Group([c1, c2], { left: canvas.width/2 - 100, top: 200 });
+            canvas.add(group);
+            closeAllPopups();
+        }
+
+        function addTChart() {
+            setMode('pointer');
+            const vLine = new fabric.Line([150, 50, 150, 300], { stroke: brushColor, strokeWidth: 4 });
+            const hLine = new fabric.Line([0, 50, 300, 50], { stroke: brushColor, strokeWidth: 4 });
+            const header1 = new fabric.IText('PROS', { fontSize: 24, left: 50, top: 10, fontFamily: 'Patrick Hand' });
+            const header2 = new fabric.IText('CONS', { fontSize: 24, left: 200, top: 10, fontFamily: 'Patrick Hand' });
+            const group = new fabric.Group([vLine, hLine, header1, header2], { left: canvas.width/2 - 150, top: 200 });
+            canvas.add(group);
+            closeAllPopups();
+        }
+
+        function addNumLine() {
+            setMode('pointer');
+            const mainLine = new fabric.Line([0, 0, 400, 0], { stroke: brushColor, strokeWidth: 3 });
+            const ticks = [];
+            for(let i=0; i<=400; i+=40) {
+                ticks.push(new fabric.Line([i, -10, i, 10], { stroke: brushColor, strokeWidth: 2 }));
+            }
+            const group = new fabric.Group([mainLine, ...ticks], { left: canvas.width/2 - 200, top: 200 });
+            canvas.add(group);
+            closeAllPopups();
+        }
+
+        // 7. General Items
+        function addText(type) {
+            setMode('pointer');
+            const isTitle = type === 'Title';
+            const text = new fabric.IText(isTitle ? 'TITLE' : 'Text', {
+                left: canvas.width/2, top: 100, originX: 'center',
+                fontFamily: 'Patrick Hand', fill: brushColor, fontSize: isTitle ? 52 : 28
+            });
+            canvas.add(text);
+            canvas.setActiveObject(text);
+        }
+
+        function addStickyNote() {
+            setMode('pointer');
+            const group = new fabric.Group([
+                new fabric.Rect({ width: 200, height: 200, fill: '#fff9c4', stroke: '#fbc02d', strokeWidth: 1 }),
+                new fabric.IText('Note', { fontFamily: 'Patrick Hand', fontSize: 24, fill: '#333', left: 20, top: 20 })
+            ], { left: canvas.width/2-100, top: 200 });
+            canvas.add(group);
+        }
+
+        // 8. Popups & UI Logic
+        function togglePopup(id) {
+            const popup = document.getElementById(id);
+            const isVisible = popup.style.display === 'grid';
+            closeAllPopups();
+            if (!isVisible) popup.style.display = 'grid';
+        }
+
+        function closeAllPopups() {
+            document.querySelectorAll('.popup-menu').forEach(p => p.style.display = 'none');
+        }
+
+        // 9. Zoom Logic
+        let zoomLevel = 1;
+        function zoom(delta) {
+            zoomLevel += delta;
+            if (zoomLevel < 0.2) zoomLevel = 0.2;
+            if (zoomLevel > 3) zoomLevel = 3;
+            applyZoom();
+        }
+        function zoomReset() {
+            zoomLevel = 1;
+            applyZoom();
+        }
+        function applyZoom() {
+            document.getElementById('canvas-wrapper').style.transform = `scale(${zoomLevel})`;
+            document.getElementById('zoom-text').innerText = Math.round(zoomLevel * 100) + '%';
+        }
+
+        // 10. Utils
+        function deleteSelected() {
+            const activeObjects = canvas.getActiveObjects();
+            if (activeObjects.length) {
+                canvas.discardActiveObject();
+                activeObjects.forEach(obj => canvas.remove(obj));
+            }
+        }
+        function clearCanvas() {
+            if(confirm('Clear all?')) { canvas.clear(); canvas.backgroundColor='#fff'; drawBackground(); }
+        }
+        window.addEventListener('keydown', (e) => {
+            if((e.key==='Delete'||e.key==='Backspace') && (!canvas.getActiveObject() || !canvas.getActiveObject().isEditing)) deleteSelected();
+        });
+        function downloadChart() {
+            canvas.discardActiveObject(); 
+            canvas.renderAll();
+            const link = document.createElement('a');
+            link.download = 'AnchorChart.png';
+            link.href = canvas.toDataURL({ format: 'png', multiplier: 2 });
+            link.click();
+        }
+
+        // 11. Emojis
+        const emojiList = ['😀','😃','😄','😁','😆','😅','😂','🤣','😊','😇','🙂','🙃','😉','😌','😍','🥰','😘','😗','😙','😚','😋','😛','😝','😜','🤪','🧐','🤓','😎','🤩','🥳','😏','😒','😞','😔','😟','😕','🙁','☹️','😣','😖','😫','😩','🥺','😢','😭','😤','😠','😡','🤬','👍','👎','👋','🙌','👏','🤝','👀','🧠','💡','⭐'];
+        const emojiContainer = document.getElementById('emoji-popup');
+        emojiList.forEach(emoji => {
+            const btn = document.createElement('div');
+            btn.className = 'emoji-btn popup-item';
+            btn.style.fontSize = '1.5rem';
+            btn.innerText = emoji;
+            btn.onclick = () => { 
+                setMode('pointer'); 
+                const text = new fabric.Text(emoji, { fontSize: 60, left: canvas.width/2, top: 200 });
+                canvas.add(text); 
+                closeAllPopups();
+            };
+            emojiContainer.appendChild(btn);
+        });
+
+        // Initialize: Set Draw mode active by default
+        setMode('draw');
+    </script>
+</body>
+</html>

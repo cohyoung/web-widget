@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Guided Oral Reading Tool + Audio</title>
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #3498db;
+            --error-color: #e74c3c;
+            --phrasing-color: #f39c12;
+            --record-color: #e74c3c;
+            --bg-color: #f4f7f6;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .container {
+            max-width: 900px;
+            width: 100%;
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        h1 {
+            color: var(--primary-color);
+            text-align: center;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #7f8c8d;
+            font-size: 0.9rem;
+            margin-bottom: 20px;
+        }
+
+        /* Setup Section */
+        #setup-area {
+            display: block;
+        }
+
+        textarea {
+            width: 100%;
+            height: 150px;
+            padding: 10px;
+            border: 1px solid #bdc3c7;
+            border-radius: 5px;
+            font-size: 1rem;
+            resize: vertical;
+            margin-bottom: 15px;
+            font-family: inherit;
+        }
+
+        .setup-actions {
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .checkbox-label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.95rem;
+            color: var(--primary-color);
+            cursor: pointer;
+        }
+
+        /* Reading Section */
+        #reading-area {
+            display: none;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #ecf0f1;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .timer-group {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .timer-display {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--primary-color);
+            font-variant-numeric: tabular-nums;
+        }
+
+        /* Recording Indicator */
+        .rec-indicator {
+            display: none; /* Hidden by default */
+            align-items: center;
+            gap: 6px;
+            color: var(--record-color);
+            font-weight: bold;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            animation: pulse 1.5s infinite;
+        }
+
+        .rec-dot {
+            width: 12px;
+            height: 12px;
+            background-color: var(--record-color);
+            border-radius: 50%;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.4; }
+            100% { opacity: 1; }
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background 0.2s;
+            color: white;
+            margin-left: 5px;
+        }
+
+        .btn-start { background-color: #27ae60; }
+        .btn-start:hover { background-color: #219150; }
+        
+        .btn-stop { background-color: #c0392b; display: none; }
+        .btn-stop:hover { background-color: #a93226; }
+
+        .btn-reset { background-color: #7f8c8d; }
+        .btn-setup { background-color: var(--secondary-color); }
+        
+        /* Export Buttons */
+        .export-controls {
+            margin-top: 20px;
+            padding-top: 15px;
+            border-top: 1px solid #eee;
+            text-align: right;
+            display: none; /* Hidden until reading starts */
+        }
+        
+        .btn-csv { background-color: #8e44ad; }
+        .btn-audio { background-color: #d35400; display: none; } /* Hidden unless audio recorded */
+
+        .text-display {
+            font-size: 1.4rem;
+            line-height: 2;
+            color: #2c3e50;
+            padding: 20px;
+            border: 1px solid #eee;
+            border-radius: 5px;
+            min-height: 200px;
+            background: #fff;
+        }
+
+        .word {
+            cursor: pointer;
+            padding: 2px 4px;
+            border-radius: 3px;
+            transition: background 0.1s;
+            display: inline-block;
+        }
+
+        .word:hover {
+            background-color: #e8e8e8;
+        }
+
+        /* Interaction States */
+        .word.error {
+            background-color: rgba(231, 76, 60, 0.3);
+            text-decoration: line-through;
+            text-decoration-color: var(--error-color);
+        }
+
+        .word.phrasing {
+            background-color: rgba(243, 156, 18, 0.3);
+            border-bottom: 3px solid var(--phrasing-color);
+        }
+
+        .legend {
+            margin-top: 10px;
+            font-size: 0.9rem;
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+        }
+        
+        .legend-item { display: flex; align-items: center; gap: 5px; }
+        .dot { width: 10px; height: 10px; border-radius: 50%; }
+        .dot-error { background-color: rgba(231, 76, 60, 0.5); }
+        .dot-phrasing { background-color: rgba(243, 156, 18, 0.5); }
+
+        /* Results Dashboard */
+        .dashboard {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 15px;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 2px solid #eee;
+        }
+
+        .stat-card {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: var(--secondary-color);
+        }
+
+        .stat-label {
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            color: #7f8c8d;
+            margin-top: 5px;
+        }
+
+        #intervention-log {
+            margin-top: 20px;
+            font-size: 0.9rem;
+            color: #555;
+            background: #fff;
+            padding: 10px;
+            border: 1px solid #eee;
+            border-radius: 5px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .log-entry { margin-bottom: 5px; border-bottom: 1px solid #f0f0f0; padding-bottom: 2px;}
+
+    </style>
+</head>
+<body>
+
+<div class="container" id="widget-container">
+    <h1>Guided Oral Reading</h1>
+    <div class="subtitle">Feedback, Error Correction & Audio Tool</div>
+
+    <div id="setup-area">
+        <p><strong>Step 1:</strong> Paste the reading passage below.</p>
+        <textarea id="input-text" placeholder="Paste student text here...">The quick brown fox jumps over the lazy dog. Reading fluency is the bridge between decoding and comprehension.</textarea>
+        
+        <div class="setup-actions">
+            <label class="checkbox-label">
+                <input type="checkbox" id="record-audio-check"> 
+                Record Audio Session
+            </label>
+            <button class="btn btn-setup" onclick="initializeSession()">Start Session</button>
+        </div>
+    </div>
+
+    <div id="reading-area">
+        <div class="controls">
+            <div class="timer-group">
+                <div class="timer-display" id="timer">00:00</div>
+                <div class="rec-indicator" id="rec-indicator">
+                    <div class="rec-dot"></div> REC
+                </div>
+            </div>
+            <div>
+                <button class="btn btn-start" id="btn-start" onclick="toggleTimer()">Start Timer</button>
+                <button class="btn btn-stop" id="btn-stop" onclick="toggleTimer()">Pause</button>
+                <button class="btn btn-reset" onclick="resetSession()">Reset</button>
+            </div>
+        </div>
+
+        <div id="report-content">
+            <div class="text-display" id="display-box">
+                </div>
+
+            <div class="legend">
+                <div class="legend-item"><div class="dot dot-error"></div> Click: Mark Error</div>
+                <div class="legend-item"><div class="dot dot-phrasing"></div> Right-Click: Phrasing Support</div>
+            </div>
+
+            <div class="dashboard">
+                <div class="stat-card">
+                    <div class="stat-value" id="stat-wcpm">0</div>
+                    <div class="stat-label">Correct Words / Min</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="stat-accuracy">100%</div>
+                    <div class="stat-label">Accuracy</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="stat-errors">0</div>
+                    <div class="stat-label">Total Errors</div>
+                </div>
+            </div>
+
+            <div id="intervention-log">
+                <strong>Session Log:</strong>
+                <div id="log-content"></div>
+            </div>
+        </div>
+
+        <div class="export-controls" id="export-area">
+            <button class="btn btn-csv" onclick="downloadCSV()">Download Spreadsheet (CSV)</button>
+            <button class="btn btn-audio" id="btn-audio" onclick="downloadAudio()">Download Audio (WebM)</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // State Variables
+    let wordsArray = [];
+    let startTime = 0;
+    let timerInterval = null;
+    let isRunning = false;
+    let totalSeconds = 0;
+    let errorCount = 0;
+    let phrasingCount = 0;
+    let totalWords = 0;
+    let sessionLog = [];
+
+    // Audio Variables
+    let mediaRecorder = null;
+    let audioChunks = [];
+    let isAudioEnabled = false;
+
+    // DOM Elements
+    const inputText = document.getElementById('input-text');
+    const displayBox = document.getElementById('display-box');
+    const setupArea = document.getElementById('setup-area');
+    const readingArea = document.getElementById('reading-area');
+    const exportArea = document.getElementById('export-area');
+    const timerDisplay = document.getElementById('timer');
+    const btnStart = document.getElementById('btn-start');
+    const btnStop = document.getElementById('btn-stop');
+    const logContent = document.getElementById('log-content');
+    const recordCheck = document.getElementById('record-audio-check');
+    const recIndicator = document.getElementById('rec-indicator');
+    const btnAudio = document.getElementById('btn-audio');
+
+    async function initializeSession() {
+        const rawText = inputText.value.trim();
+        if (!rawText) return alert("Please enter text first.");
+
+        // Handle Audio Permissions
+        if (recordCheck.checked) {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                mediaRecorder = new MediaRecorder(stream);
+                isAudioEnabled = true;
+                
+                mediaRecorder.ondataavailable = event => {
+                    audioChunks.push(event.data);
+                };
+
+                // When stopped, create URL to download
+                mediaRecorder.onstop = () => {
+                    // This is handled in the download function mostly
+                    console.log("Recording finalized.");
+                };
+                
+                logInternal("Audio Recording Enabled", "System");
+                btnAudio.style.display = "inline-block";
+
+            } catch (err) {
+                alert("Microphone access denied. Ensure you are using HTTPS or localhost, and have granted permission. Session will proceed without audio.");
+                recordCheck.checked = false;
+                isAudioEnabled = false;
+            }
+        }
+
+        wordsArray = rawText.split(/\s+/);
+        totalWords = wordsArray.length;
+
+        renderText();
+        setupArea.style.display = 'none';
+        readingArea.style.display = 'block';
+        exportArea.style.display = 'block';
+        updateStats();
+        
+        logInternal("Session Initialized", "System");
+    }
+
+    function renderText() {
+        displayBox.innerHTML = '';
+        wordsArray.forEach((word, index) => {
+            const span = document.createElement('span');
+            span.textContent = word + ' '; 
+            span.className = 'word';
+            span.dataset.index = index;
+            span.dataset.cleanWord = word.replace(/[^\w]/g, ''); 
+            
+            span.onclick = function() { toggleError(this); };
+            span.oncontextmenu = function(e) { e.preventDefault(); togglePhrasing(this); };
+
+            displayBox.appendChild(span);
+        });
+    }
+
+    function toggleError(element) {
+        if (!isRunning && totalSeconds === 0) {
+            alert("Please start the timer first!");
+            return;
+        }
+
+        if (element.classList.contains('error')) {
+            element.classList.remove('error');
+            errorCount--;
+            logAction(`Correction removed: "${element.dataset.cleanWord}"`);
+        } else {
+            if(element.classList.contains('phrasing')) {
+                element.classList.remove('phrasing');
+                phrasingCount--;
+            }
+            element.classList.add('error');
+            errorCount++;
+            logAction(`Error marked: "${element.dataset.cleanWord}"`);
+        }
+        updateStats();
+    }
+
+    function togglePhrasing(element) {
+        if (!isRunning && totalSeconds === 0) {
+            alert("Please start the timer first!");
+            return;
+        }
+
+        if (element.classList.contains('phrasing')) {
+            element.classList.remove('phrasing');
+            phrasingCount--;
+            logAction(`Phrasing support removed: "${element.dataset.cleanWord}"`);
+        } else {
+            if(element.classList.contains('error')) {
+                element.classList.remove('error');
+                errorCount--;
+            }
+            element.classList.add('phrasing');
+            phrasingCount++;
+            logAction(`Phrasing support given: "${element.dataset.cleanWord}"`);
+        }
+        updateStats();
+    }
+
+    function toggleTimer() {
+        if (isRunning) {
+            // PAUSE logic
+            clearInterval(timerInterval);
+            isRunning = false;
+            btnStart.style.display = 'inline-block';
+            btnStart.textContent = "Resume";
+            btnStop.style.display = 'none';
+            logInternal("Timer Paused", "System");
+            
+            // Handle Audio Pause
+            if (isAudioEnabled && mediaRecorder && mediaRecorder.state === "recording") {
+                mediaRecorder.pause();
+                recIndicator.style.display = 'none';
+            }
+
+        } else {
+            // START/RESUME logic
+            startTime = Date.now() - (totalSeconds * 1000);
+            timerInterval = setInterval(updateTimer, 1000);
+            isRunning = true;
+            btnStart.style.display = 'none';
+            btnStop.style.display = 'inline-block';
+            logInternal("Timer Started/Resumed", "System");
+
+            // Handle Audio Start/Resume
+            if (isAudioEnabled && mediaRecorder) {
+                recIndicator.style.display = 'flex'; // Show red dot
+                if (mediaRecorder.state === "inactive") {
+                    mediaRecorder.start();
+                } else if (mediaRecorder.state === "paused") {
+                    mediaRecorder.resume();
+                }
+            }
+        }
+    }
+
+    function updateTimer() {
+        const now = Date.now();
+        totalSeconds = Math.floor((now - startTime) / 1000);
+        
+        const minutes = Math.floor(totalSeconds / 60).toString().padStart(2, '0');
+        const seconds = (totalSeconds % 60).toString().padStart(2, '0');
+        timerDisplay.textContent = `${minutes}:${seconds}`;
+        
+        updateStats();
+    }
+
+    function updateStats() {
+        const correctWords = totalWords - errorCount;
+        const accuracy = totalWords > 0 ? ((correctWords / totalWords) * 100).toFixed(1) : 100;
+        const timeCalc = totalSeconds > 0 ? totalSeconds : 1;
+        const wcpm = Math.round((correctWords / timeCalc) * 60);
+
+        document.getElementById('stat-wcpm').textContent = totalSeconds > 0 ? wcpm : "--";
+        document.getElementById('stat-accuracy').textContent = accuracy + "%";
+        document.getElementById('stat-errors').textContent = errorCount;
+        
+        return { wcpm, accuracy, correctWords };
+    }
+
+    function logAction(msg) {
+        const timeStr = timerDisplay.textContent;
+        logInternal(msg, timeStr);
+    }
+
+    function logInternal(msg, timeStr) {
+        sessionLog.push({ time: timeStr, action: msg });
+        const entry = document.createElement('div');
+        entry.className = 'log-entry';
+        entry.textContent = `[${timeStr}] ${msg}`;
+        logContent.prepend(entry);
+    }
+
+    function downloadAudio() {
+        if (!isAudioEnabled || !mediaRecorder) return;
+
+        // We must stop the recorder to finalize the blob
+        if (mediaRecorder.state !== "inactive") {
+            mediaRecorder.stop();
+            // Wait briefly for the stop event to process chunks
+            setTimeout(processAudioDownload, 200);
+        } else {
+            processAudioDownload();
+        }
+    }
+
+    function processAudioDownload() {
+        if(audioChunks.length === 0) return alert("No audio recorded.");
+
+        const blob = new Blob(audioChunks, { type: 'audio/webm' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = url;
+        a.download = 'reading_session.webm';
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+    }
+
+    function downloadCSV() {
+        const stats = updateStats();
+        const now = new Date();
+        const dateStr = now.toLocaleDateString() + ' ' + now.toLocaleTimeString();
+
+        let csvContent = "data:text/csv;charset=utf-8,";
+        
+        csvContent += "GUIDED ORAL READING REPORT\n";
+        csvContent += `Date,${dateStr}\n`;
+        csvContent += `Duration (sec),${totalSeconds} seconds\n`;
+        csvContent += `Total Words In Passage,${totalWords}\n`;
+        csvContent += `Total Words Read Correctly,${stats.correctWords}\n`;
+
+        csvContent += `WCPM,${stats.wcpm}\n`;
+        csvContent += `Accuracy,${stats.accuracy}%\n`;
+        csvContent += `Errors,${errorCount}\n`;
+        csvContent += `Phrasing Support,${phrasingCount}\n\n`;
+
+        csvContent += "SESSION LOG\n";
+        csvContent += "Timestamp,Action\n";
+        
+        sessionLog.forEach(row => {
+            csvContent += `${row.time},"${row.action}"\n`;
+        });
+
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", "reading_session_data.csv");
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+
+    function resetSession() {
+        if(confirm("Are you sure you want to reset? All data and audio will be lost.")) {
+            // Stop Audio
+            if(mediaRecorder && mediaRecorder.state !== "inactive") {
+                mediaRecorder.stop();
+                // We also need to stop the stream tracks to turn off the mic light
+                mediaRecorder.stream.getTracks().forEach(track => track.stop());
+            }
+
+            clearInterval(timerInterval);
+            isRunning = false;
+            totalSeconds = 0;
+            errorCount = 0;
+            phrasingCount = 0;
+            wordsArray = [];
+            sessionLog = [];
+            
+            // Audio Reset
+            audioChunks = [];
+            mediaRecorder = null;
+            isAudioEnabled = false;
+            recIndicator.style.display = 'none';
+            btnAudio.style.display = 'none';
+            
+            timerDisplay.textContent = "00:00";
+            btnStart.textContent = "Start Timer";
+            btnStart.style.display = 'inline-block';
+            btnStop.style.display = 'none';
+            
+            setupArea.style.display = 'block';
+            readingArea.style.display = 'none';
+            logContent.innerHTML = '';
+        }
+    }
+</script>
+
+</body>
+</html>

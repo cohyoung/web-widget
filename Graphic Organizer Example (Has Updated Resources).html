@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Compare & Contrast Widget</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --secondary: #64748b;
+            --bg: #f8fafc;
+            --card: #ffffff;
+            --border: #e2e8f0;
+        }
+
+        body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color: #1e293b; padding: 20px; min-height: 100vh; position: relative; }
+        .widget-container { max-width: 950px; margin: 0 auto; background: var(--card); padding: 40px; border-radius: 12px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); }
+        
+        /* Stepper */
+        .stepper { display: flex; justify-content: space-between; margin-bottom: 40px; }
+        .step { flex: 1; text-align: center; position: relative; font-size: 0.85rem; font-weight: 600; color: var(--secondary); }
+        .step::after { content: ""; height: 2px; width: 100%; background: var(--border); position: absolute; top: 15px; left: 50%; z-index: 1; }
+        .step:last-child::after { display: none; }
+        .step-num { width: 32px; height: 32px; background: var(--border); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 8px; position: relative; z-index: 2; color: white; }
+        .step.active .step-num { background: var(--primary); }
+        .step.active { color: var(--primary); }
+
+        .step-content { display: none; }
+        .step-content.active { display: block; }
+        
+        /* Topic Grid Styles */
+        #topic-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 16px;
+            margin-top: 20px;
+        }
+
+        .topic-card {
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            padding: 24px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            background: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+        }
+
+        .topic-card:hover {
+            border-color: var(--primary);
+            background: #f0f7ff;
+            transform: translateY(-2px);
+        }
+
+        .topic-card.selected {
+            border-color: var(--primary);
+            background: #eff6ff;
+            box-shadow: 0 0 0 1px var(--primary);
+        }
+
+        .topic-emoji {
+            font-size: 2.5rem;
+        }
+
+        .topic-title {
+            font-weight: 600;
+            font-size: 1rem;
+            line-height: 1.4;
+        }
+
+        /* Sub-topic Item Styles (Original style kept for Step 2) */
+        .option-item { border: 2px solid var(--border); border-radius: 8px; padding: 15px; margin-bottom: 12px; cursor: pointer; display: flex; align-items: center; gap: 10px; }
+        .option-item:hover { border-color: var(--primary); background: #f0f7ff; }
+        .selection-msg { background: #eff6ff; padding: 15px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid var(--primary); }
+
+        /* Step 3 Table */
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th { background: #f1f5f9; padding: 12px; border: 1px solid var(--border); text-align: center; }
+        td { padding: 12px; border: 1px solid var(--border); vertical-align: top; }
+        .clickable-cell:hover { background: #f8fafc; cursor: pointer; }
+        .center-col { text-align: center; }
+
+        /* Step 4 Report */
+        #report-preview { border: none; padding: 20px 0; background: white; color: black; }
+        .body-para-box { margin: 25px 0; padding-top: 10px; border-top: 1px solid #eee; }
+        .res-link-list { margin-top: 8px; padding-left: 20px; }
+
+        .export-actions { display: flex; justify-content: center; gap: 15px; margin-top: 30px; }
+
+        .nav-buttons { margin-top: 30px; display: flex; justify-content: space-between; border-top: 1px solid var(--border); padding-top: 20px; }
+        button { padding: 10px 24px; border-radius: 6px; border: none; cursor: pointer; font-weight: 600; }
+        .btn-next { background: var(--primary); color: white; }
+        .btn-back { background: var(--secondary); color: white; }
+
+        @media print {
+            body { background: white; padding: 0; }
+            .widget-container { box-shadow: none; width: 100%; border: none; padding: 0; }
+            .nav-buttons, .stepper, .export-actions, h2 { display: none; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="widget-container">
+    <div class="stepper">
+        <div class="step active" id="s1-indicator"><div class="step-num">1</div>Topics</div>
+        <div class="step" id="s2-indicator"><div class="step-num">2</div>Sub-topics</div>
+        <div class="step" id="s3-indicator"><div class="step-num">3</div>Resources</div>
+        <div class="step" id="s4-indicator"><div class="step-num">4</div>Template</div>
+    </div>
+
+    <div class="step-content active" id="step-1">
+        <h2>Choose Your Comparison Topic</h2>
+        <div id="topic-list"></div>
+    </div>
+
+    <div class="step-content" id="step-2">
+        <h2>Select Sub-Topic(s)</h2>
+        <div id="selected-topic-display" class="selection-msg"></div>
+        <div id="subtopic-list"></div>
+    </div>
+
+    <div class="step-content" id="step-3">
+        <h2>List of Resources</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Sub-Topic</th>
+                    <th>Title</th>
+                    <th>Description</th>
+                    <th>Include Resource</th>
+                </tr>
+            </thead>
+            <tbody id="resource-table-body"></tbody>
+        </table>
+    </div>
+
+    <div class="step-content" id="step-4">
+        <h2>Paper Outline</h2>
+        <div id="report-preview"></div>
+        <div class="export-actions">
+            <button onclick="window.print()" class="btn-next">Save to PDF</button>
+        </div>
+    </div>
+
+    <div class="nav-buttons">
+        <button class="btn-back" id="backBtn" onclick="changeStep(-1)" style="visibility: hidden;">Back</button>
+        <button class="btn-next" id="nextBtn" onclick="changeStep(1)">Next Step</button>
+    </div>
+</div>
+
+<script>
+    let appData = {
+        topics: [
+            { id: 't1', title: 'Competitive Gaming vs. Sandbox Play', emoji: '🎮' },
+            { id: 't2', title: 'Exercise vs. Sedentary Lifestyle', emoji: '🏃' },
+            { id: 't3', title: 'Healthy Eating vs. Fast Foods', emoji: '🥗' },
+            { id: 't4', title: 'Human Connection vs. AI Chatbots', emoji: '🤖' },
+            { id: 't5', title: 'Intentional Learning vs. Passive Doom Scrolling', emoji: '📚' },
+            { id: 't6', title: 'Mental Health & Technology', emoji: '🌱'  },
+            { id: 't7', title: 'Mindfulness vs. Distraction', emoji: '🧘' },
+            { id: 't8', title: 'Online Activism vs. Local Volunteering', emoji: '📣' },
+            { id: 't9', title: 'Public Social Posting vs. Private Group Messages', emoji: '📱' },
+            { id: 't10', title: 'Sleep Hygiene & Late-Night Habits', emoji: '😴' },
+            { id: 't11', title: 'Social Media vs. In-Person', emoji: '👥' }, 
+            { id: 't12', title: 'Technology Addiction', emoji: '📵' }
+        ],
+        subTopics: {
+'t1': [ { id: 's1', title: 'Adrenaline Rush, Leaderboards, Team Communication Stem Skills' },
+ { id: 's2', title: 'Creative Building, Personal Pace, Relaxation' },
+ { id: 's3', title: 'Emotional Regulation, Empathy, Imaginative Play' },
+ { id: 's4', title: 'Esports And Youth Wellbeing' },
+ { id: 's5', title: 'Flow State, Self Expression, Emotional Healing' },
+ { id: 's6', title: 'Gaming Research' },
+ { id: 's7', title: 'Healthy Gaming Habits' },
+ { id: 's8', title: 'Leaderboards, Competitive Ranking, Motivation' },
+ { id: 's9', title: 'Low-Stress Gaming, Social Benefits, Mental Health' },
+ { id: 's10', title: 'Performance Anxiety, Coping Strategies, Mental Health' },
+ { id: 's11', title: 'Strategy, Reaction Speed, Performance Anxiety, Teamwork' },
+ { id: 's12', title: 'Video Games and Teen Development' } ] ,
+'t2': [ { id: 's13', title: 'Bodyweight Exercises, Hiits, Sports' },
+ { id: 's14', title: 'Cardio, Strength, Flexibility, Fitness Goals' },
+ { id: 's15', title: 'Dance Workout, Outdoor Sports, Group Games' },
+ { id: 's16', title: 'Gaming, Binge-Watching, Anxiety' },
+ { id: 's17', title: 'Global Guidelines, Exercise Benefits, Inactivity Risks' },
+ { id: 's18', title: 'Inactive,  Screen Time, Poor Posture' },
+ { id: 's19', title: 'Physical Activity' },
+ { id: 's20', title: 'Physical Health, Mental Clarity, Social Engagement' },
+ { id: 's21', title: 'Poor Posture, Musculoskeletal Pain, Visual Strain' },
+ { id: 's22', title: 'Screen Time, Inactivity, Posture Issues' },
+ { id: 's23', title: 'Sitting Disease, Chronic Illness, Low Energy' },
+ { id: 's24', title: 'Strength Training, Cardio, Flexibility' },
+ { id: 's25', title: 'Team Sports, Stamina, Healthy Habits' },
+ { id: 's26', title: 'Teen Exercise' },
+ { id: 's27', title: 'Teen Health' },
+ { id: 's28', title: 'Youth Physical Activity Guidelines' } ] ,
+'t3': [ { id: 's29', title: 'Balanced Plate, Hydration, Fruits & Veggies, Brain Fuel' },
+ { id: 's30', title: 'Healthy Eating' },
+ { id: 's31', title: 'High Sugar, Behavioral Issues, Brain Development' },
+ { id: 's32', title: 'High Sugar/Salt, Hidden Fats, Energy Crashes' },
+ { id: 's33', title: 'Home Cooking, Affordable Meals, Nutrition Skills' },
+ { id: 's34', title: 'Home-Cooked Meals, Hydration, Sustained Energy' },
+ { id: 's35', title: 'Nutrition Education' },
+ { id: 's36', title: 'Nutrition Source For Teens' },
+ { id: 's37', title: 'Obesity, Diabetes, Late-Night Drives' },
+ { id: 's38', title: 'Portion Control, Vitamins, Hydration, Natural Sugars' },
+ { id: 's39', title: 'Processed Foods, Artificial Additives, Health Risks' },
+ { id: 's40', title: 'Soda Intake, Calorie Overload, Convenience' },
+ { id: 's41', title: 'Teen Nutrition' },
+ { id: 's42', title: 'Tips And Requirements' },
+ { id: 's43', title: 'Vitamins, Hydration, Balanced Diet' } ] ,
+'t4': [ { id: 's44', title: 'AI And Teens' },
+ { id: 's45', title: 'AI Companionship, Psychology Well-Being, User Disclosure' },
+ { id: 's46', title: 'AI Impact On Youth' },
+ { id: 's47', title: 'Algorithm Bias, Empathy Simulation, Ethical Concerns' },
+ { id: 's48', title: 'Communication Skills, Trust-Building, Empathy' },
+ { id: 's49', title: 'Dependency Risks, Affective Mirroring, Persona Customization' },
+ { id: 's50', title: 'Emotional Empathy , Active Listening, Mutual Growth' },
+ { id: 's51', title: 'Empathy Exercises, Emotional Intelligence, Social Skills' },
+ { id: 's52', title: 'Empathy Mapping, Role-Playing, Shared Activities' },
+ { id: 's53', title: 'Human-AI Interaction' },
+ { id: 's54', title: 'Loneliness Relief, Emotional Support, Behavioral Research' },
+ { id: 's55', title: 'Privacy Risks, Algorithm Bias, Transparency' },
+ { id: 's56', title: 'Programmed Empathy, Loneliness Relief, Scripted Support' },
+ { id: 's57', title: 'Social Isolation, Dependency, Ethical Implications' },
+ { id: 's58', title: 'Technology, Empathy, And Adolescents' },
+ { id: 's59', title: 'User Privacy, Data Misuse, Security Risks' } ] ,
+'t5': [ { id: 's60', title: 'Active Learning Strategies' },
+ { id: 's61', title: 'Active Learning, Critical Thinking, Problem-Solving' },
+ { id: 's62', title: 'Attention Slicing, Anxiety, Cognitive Decline' },
+ { id: 's63', title: 'Digital Overload, Anxiety, Depression' },
+ { id: 's64', title: 'Educational Apps, Strategy Games, Problem-Solving' },
+ { id: 's65', title: 'Gamification, Personalized Learning, Interactive Simulations' },
+ { id: 's66', title: 'Inquiry-Based Learning, Project-Based Learning, Collaboration' },
+ { id: 's67', title: 'Intentional Learning Techniques' },
+ { id: 's68', title: 'Learning Apps' },
+ { id: 's69', title: 'Microlearning, Gamified Learning, Productivity' },
+ { id: 's70', title: 'Microlearning, Habit Change, Intentional Reading' },
+ { id: 's71', title: 'Screen Addiction, Impulsivity, Emotional Fatigue' },
+ { id: 's72', title: 'Screen Time And Learning' },
+ { id: 's73', title: 'Tutorials, Experiential Learning, Reflection' } ] ,
+'t6': [ { id: 's74', title: 'Digital Behavior, Teen Trends' },
+ { id: 's75', title: 'Digital Media, Psychological Well Being' },
+ { id: 's76', title: 'Digital Wellbeing, Social Media Impact' },
+ { id: 's77', title: 'Global Perspective, Digital Risks' },
+ { id: 's78', title: 'Mental Health Support, Digital Wellbeing' },
+ { id: 's79', title: 'Mindfulness, Stress Management' },
+ { id: 's80', title: 'Peer-Reviewed Study, Social Media' },
+ { id: 's81', title: 'Screen Time, Anxiety, Depression' },
+ { id: 's82', title: 'Screen Time, Mental Health' },
+ { id: 's83', title: 'Social Media, Psychological Effects' },
+ { id: 's84', title: 'Social Media, Self-Esteem' },
+ { id: 's85', title: 'Toolkit, Technology Impact' } ] ,
+'t7': [ { id: 's86', title: 'Breath Counting, Mindful Movement, Gratitude Journaling' },
+ { id: 's87', title: 'Breathing Exercises, Grounding Skills, Yoga Breaks' },
+ { id: 's88', title: 'Cognitive Overload, Stress, Attention Decline' },
+ { id: 's89', title: 'Deep Breathing, Gratitude Journaling, Emotional Regulation ' },
+ { id: 's90', title: 'Gratitude Journaling, Deep Breathing, Classroom Calm' },
+ { id: 's91', title: 'Headspace, Calm, Emotional Balance' },
+ { id: 's92', title: 'Info Overload, Dopamine Loops, Multitasking Myth' },
+ { id: 's93', title: 'Meditation Apps, Grounding Skills, Stress Relief' },
+ { id: 's94', title: 'Meditation Apps, Mental Wellbeing, Stress Relief' },
+ { id: 's95', title: 'Mental Clarity, Focus Techniques, Calm Responses' },
+ { id: 's96', title: 'Mindfulness Activities' },
+ { id: 's97', title: 'Mindfulness And Youth Mental Health' },
+ { id: 's98', title: 'Mindfulness For Teens' },
+ { id: 's99', title: 'Mindfulness Tools For Teens' },
+ { id: 's100', title: 'Multitasking Myth, Mental Fog, Info Overload' },
+ { id: 's101', title: 'Push Notifications, Phone Dependence, Digital Wellbeing' },
+ { id: 's102', title: 'Smiling Mind, Calm, Resilience Building' } ] ,
+'t8': [ { id: 's103', title: 'Campaign Planning, Petitions, Social Media Strategies' },
+ { id: 's104', title: 'Community Service Resources For Teens' },
+ { id: 's105', title: 'Digital Advocacy, Hashtag Campaigns, Global Reach' },
+ { id: 's106', title: 'Echo Chambers, Sharing Resources, Social Media Activism' },
+ { id: 's107', title: 'Hands-On Impact, Civic Duty, Interpersonal Bonding' },
+ { id: 's108', title: 'Leadership, Teamwork, Empathy' },
+ { id: 's109', title: 'Mental Well-Being, Accountability, Social Skills' },
+ { id: 's110', title: 'Skill Sharing, Direct Results, Local Needs' },
+ { id: 's111', title: 'Slacktivism Risk, Hashtag Campaigns, Quick Engagement' },
+ { id: 's112', title: 'Teen Volunteering Toolkit' },
+ { id: 's113', title: 'Virtual Volunteering' },
+ { id: 's114', title: 'Youth Activism Resources' } ] ,
+'t9': [ { id: 's115', title: 'Curated Content, Aesthetic Focus, Public Validation, Follower Counts' },
+ { id: 's116', title: 'Digital Footprint, Performative Identity, Authenticity' },
+ { id: 's117', title: 'Encrypted Privacy, Metadata Protection, Secure Communication' },
+ { id: 's118', title: 'End-To-End Encryption, Gdpr Compliance, Secure Messaging' },
+ { id: 's119', title: 'Group Messaging And Privacy' },
+ { id: 's120', title: 'Group Messaging, Insider Jokes, Close Friendships' },
+ { id: 's121', title: 'High Trust, Niche Interests, Safe Relationships' },
+ { id: 's122', title: 'Performative Identity, Algorithmic Amplification, Fomo' },
+ { id: 's123', title: 'Privacy Education' },
+ { id: 's124', title: 'Private Messaging And Teen Safety' },
+ { id: 's125', title: 'Safe Space, Encrypted Privacy, Niche Interests' },
+ { id: 's126', title: 'Social Comparison, Curated Images, Mental Health Impact' },
+ { id: 's127', title: 'Social Comparison, Global Reach, Digital Footprint' },
+ { id: 's128', title: 'Social Posting Vs. Private Messaging' } ] ,
+'t10': [ { id: 's129', title: 'Circadian Rhythm & Melatonin Science' },
+ { id: 's130', title: 'Healthy Sleep Habits' },
+ { id: 's131', title: 'Late-Night Habits & Digital Distractions' },
+ { id: 's132', title: 'Reducing Screen Time Building Healthy Routines' },
+ { id: 's133', title: 'Sleep Hygiene & Bedtime Routines' } ] ,
+'t11': [ { id: 's134', title: 'Adolescent Development' },
+ { id: 's135', title: 'Social Media And Mental Health' },
+ { id: 's136', title: 'Social Media And Teens' },
+ { id: 's137', title: 'Teen Social Media' } ] ,
+'t12': [ { id: 's138', title: 'Behavioral Health, Internet Addiction' },
+ { id: 's139', title: 'Digital Addictions Youth Guide' },
+ { id: 's140', title: 'Digital Detox, Mindfulness' },
+ { id: 's141', title: 'Digital Overload, Stress' },
+ { id: 's142', title: 'Gaming Addiction, Mental Health' },
+ { id: 's143', title: 'Managing Teen Screen Time' },
+ { id: 's144', title: 'Parental Guidance, Screen Time' },
+ { id: 's145', title: 'Screen Addiction Explained' },
+ { id: 's146', title: 'Screen Addiction, Digital Wellbeing' },
+ { id: 's147', title: 'Social Media, Mental Health' },
+ { id: 's148', title: 'Teen Internet Use And Mental Health' } ] ,
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        },
+        resources: {
+
+
+
+
+
+
+
+'s1': [ { title: 'High School Esports', link: 'https://playvs.com/high-school/', desc: 'Explains how structured esports program build team work, critical thinking, and leadership while offering competitive excitement and scholarships opportunities', publisher: 'Play VS', date: '2026, playvs.com/high-school/' } ], 
+'s2': [ { title: 'How therapy can support childrens self-expression and creativity', link: 'https://www.achievingstarstherapy.com/blog/how-therapy-can-support-children-s-self-expression-and-creativity', desc: 'Highlights the role of creative play in emotional growth, stress relief, and fostering individuality', publisher: 'Achieving Stars Therapy', date: '2025, www.achievingstarstherapy.com/blog/how-therapy-can-support-children-s-self-expression-and-creativity' } ], 
+'s3': [ { title: 'The Power of Creative Play in Building Emotional Intelligence in Children', link: 'https://activity-box.com/learning-hub/creativity-and-emotional-intelligence', desc: 'Shows how creative play nurtures emotional intelligence and resilience in teens', publisher: 'ActivityBox', date: '2026, activity-box.com/learning-hub/creativity-and-emotional-intelligence' } ], 
+'s4': [ { title: 'Exploring Esports as Context to Support Youth Wellbeing', link: 'https://connectedlearning.uci.edu/blog/exploring-esports-as-context-to-support-youth-wellbeing/', desc: 'Research on esports and youth wellbeing.', publisher: 'University of California, Irvine Connected Learning Lab', date: '2021, connectedlearning.uci.edu/blog/exploring-esports-as-context-to-support-youth-wellbeing/' } ], 
+'s5': [ { title: 'Sand Play Therapy for Children: Expressing Emotions Through Symbols', link: 'https://www.kidsfirstservices.com/first-insights/sand-play-therapy-for-children-expressing-emotions-through-symbols', desc: 'Explains how sandbox-tyles play fosters creativity, problem-solving , and emotional regulation', publisher: 'Kids First', date: '2025, www.kidsfirstservices.com/first-insights/sand-play-therapy-for-children-expressing-emotions-through-symbols' } ], 
+'s6': [ { title: 'Adolescent Media Use: Digital Gaming and Social Interaction', link: 'https://digitalwellnesslab.org/wp-content/uploads/Digital-Wellness-Lab-Pulse-Report-Apr-2024.pdf', desc: 'Latest research on gaming and social wellbeing.', publisher: 'Digital Wellness Lab', date: '2024, digitalwellnesslab.org/wp-content/uploads/Digital-Wellness-Lab-Pulse-Report-Apr-2024.pdf' } ], 
+'s7': [ { title: 'Video Gaming 101: Healthy vs Problematic Gaming', link: 'https://www.childrenandscreens.org/learn-explore/research/video-gaming-101-healthy-vs-problematic-gaming/', desc: 'Guidance on healthy gaming habits for teens.', publisher: 'Institute of Digital Media and Child Development', date: '2024, www.childrenandscreens.org/learn-explore/research/video-gaming-101-healthy-vs-problematic-gaming/' } ], 
+'s8': [ { title: 'Gaming Leaderboards: The Complete Guide for Developers and Communities', link: 'https://trackscore.online/blog/gaming-leaderboards-essential-guide-for-developers-and-communities', desc: 'Explores the psychology leaderboards and their role in driving engagement and competitive performance', publisher: 'TrackScore', date: '2025, trackscore.online/blog/gaming-leaderboards-essential-guide-for-developers-and-communities' } ], 
+'s9': [ { title: 'Teens say video gaming has social and mental health benefits, but some downsides as well', link: 'https://www.apa.org/monitor/2025/03/teen-video-gaming-benefits-downsides', desc: 'Research on how gaming can provide stress relief and social connection when balanced properly', publisher: 'American Psychological Association', date: '2025, www.apa.org/monitor/2025/03/teen-video-gaming-benefits-downsides' } ], 
+'s10': [ { title: 'Stressors and coping strategies in esports: a systematic review', link: 'https://www.tandfonline.com/doi/pdf/10.1080/1750984X.2024.2386528', desc: 'Systematic review of stressors in esports and coping techniques for managing pressure and toxic environments', publisher: 'Taylor & Francis Online', date: '2024, www.tandfonline.com/doi/pdf/10.1080/1750984X.2024.2386528' } ], 
+'s11': [ { title: 'Winning in Ranked: A Guide for Competitive Gamers', link: 'https://www.zleague.gg/theportal/ranked-competitive-gaming/', desc: 'A guide to mastering ranked play with tips on communication, map awareness, and coping with high-pressure environments', publisher: 'Z League', date: '2025, www.zleague.gg/theportal/ranked-competitive-gaming/' } ], 
+'s12': [ { title: 'Video Games and Teens', link: 'https://www.apa.org/monitor/2025/03/teen-video-gaming-benefits-downsides', desc: 'Research on video games and adolescent development.', publisher: 'American Psychological Association', date: '2025, www.apa.org/monitor/2025/03/teen-video-gaming-benefits-downsides' } ], 
+'s13': [ { title: '25+ Workouts for Teens That Make Fitness Fun', link: 'https://yourteenmag.com/health/physical-health/workouts-for-teens-that-make-fitness-fun', desc: 'A collection of engaging workout for teens, from bodyweight routines to quick cardio sessions', publisher: 'Your Teen Magazine', date: '2025, yourteenmag.com/health/physical-health/workouts-for-teens-that-make-fitness-fun' } ], 
+'s14': [ { title: 'Empowering Teens: The Essential Guide to Cardio Fitness', link: 'https://klbfit.com/empowering-teens-the-essential-guide-to-cardio-fitness/', desc: 'A Roadmap for teens to build cardiovascular health through aerobic exercises ', publisher: 'KLBFit', date: '2025, klbfit.com/empowering-teens-the-essential-guide-to-cardio-fitness/' } ], 
+'s15': [ { title: 'Boost Your Energy: Fun Cardio Ideas for Teens', link: 'https://fitreact.com/boost-your-energy-fun-cardio-ideas-for-teens/', desc: 'Creative cardio ideas like Zumba, hiking and social workouts to make exercise enjoyable', publisher: 'FitReact', date: '2026, fitreact.com/boost-your-energy-fun-cardio-ideas-for-teens/' } ], 
+'s16': [ { title: 'Study links excessive screen time to psychological distress in adolescents', link: 'https://www.news-medical.net/news/20250221/Study-links-excessive-screen-time-to-psychological-distress-in-adolescents.aspx', desc: 'Research on how prolonged screen time correlates with anxiety depression, and poor posture', publisher: 'News-Medical', date: '2025, www.news-medical.net/news/20250221/Study-links-excessive-screen-time-to-psychological-distress-in-adolescents.aspx' } ], 
+'s17': [ { title: 'Physical Activity', link: 'https://www.who.int/news-room/fact-sheets/detail/physical-activity', desc: 'WHO recommendation for physical activity and the dangers of sedentary behaviors worldwide', publisher: 'World Health Organization', date: '2024, www.who.int/news-room/fact-sheets/detail/physical-activity' } ], 
+'s18': [ { title: 'Lack of Physical Activity and Sedentary Lifestyle', link: 'https://studentjournalismchallenge.org/lack-of-physical-activity-and-sedentary-lifestyle/', desc: 'Explores how sedentary habits among students lead to obesity,  fatigue, and mental health issues', publisher: 'Student Journalism Challenge', date: '2025, studentjournalismchallenge.org/lack-of-physical-activity-and-sedentary-lifestyle/' } ], 
+'s19': [ { title: 'Building a Culture of Movement: Creative Ways to Promote Physical Activity Among Teenagers', link: 'https://njaes.rutgers.edu/FS1367/', desc: 'Practical strategies for caregivers and educators.', publisher: 'Rutgers New Jersey Agricultural Experiment Station', date: '2025, njaes.rutgers.edu/FS1367/' } ], 
+'s20': [ { title: 'Active vs. Sedentary Lifestyle: Discover the Health Risks and Benefits You Can’t Ignore', link: 'https://outcomesmhcd.com/fitness-exercise/active-vs-sedentary-lifestyle/', desc: 'Compares active and sedentary lifestyles, highlighting benefits of movement and risk of inactivity', publisher: 'Outcomes MHCD', date: '2025, outcomesmhcd.com/fitness-exercise/active-vs-sedentary-lifestyle/' } ], 
+'s21': [ { title: 'Effects on Prolonged Screen Time on Postural Health and Visual Health in Children and Adolescents: A Scoping Review', link: 'https://www.tandfonline.com/doi/pdf/10.2147/ORR.S519541', desc: 'A review of how extended screen use affects posture and visual health in adolescents', publisher: 'Orthopedic Research and Reviews', date: '2025, www.tandfonline.com/doi/pdf/10.2147/ORR.S519541' } ], 
+'s22': [ { title: 'Sedentary Kids: The Health Impacts of Sedentary Behaviour On Children and Adolescents', link: 'https://www.naspem.org/sedentary-kids-the-health-impacts-of-sedentary-behaviour-on-children-and-adolescents/', desc: 'Discuss the rise of sedentary behaviors in teens and its impact on physical and mental health', publisher: 'North American Society for Pediatric Exercise Medicine (NASPEM)', date: '2021, www.naspem.org/sedentary-kids-the-health-impacts-of-sedentary-behaviour-on-children-and-adolescents/' } ], 
+'s23': [ { title: 'Health Risks of an Inactive Lifestyle', link: 'https://medlineplus.gov/healthrisksofaninactivelifestyle.html', desc: 'Details the health risks of prolonged sitting, including obesity and cardiovascular disease', publisher: 'MedlinePlus', date: '2026, medlineplus.gov/healthrisksofaninactivelifestyle.html' } ], 
+'s24': [ { title: 'Teen Home Workout Plan: Expert Tips for Maximum Results', link: 'https://www.typeatraining.com/blog/teen-home-workout-plan-expert-tips-for-maximum-results/', desc: 'Practical advice for teens to crate home workout plant combining cardio and strength exercises safely', publisher: 'Type A Training', date: '2025, www.typeatraining.com/blog/teen-home-workout-plan-expert-tips-for-maximum-results/' } ], 
+'s25': [ { title: 'Top Ten Fun and Effective Workouts for Teenagers', link: 'https://theactivekid.co/workouts-for-teenagers/', desc: 'Fun workout ideas including dance classes, team ports,  and strength exercises to keep teens active and motivated', publisher: 'The Active Kid', date: '2024, theactivekid.co/workouts-for-teenagers/' } ], 
+'s26': [ { title: 'Teens and Exercise: What Parents Need to Know', link: 'https://www.mayoclinichealthsystem.org/hometown-health/speaking-of-health/teens-and-exercise', desc: 'Guidance for parents and teens on building exercise habits.', publisher: 'Mayo Clinic Health System', date: '2022, www.mayoclinichealthsystem.org/hometown-health/speaking-of-health/teens-and-exercise' } ], 
+'s27': [ { title: 'Can Exercise Help Relieve Teen Depression', link: 'https://www.health.harvard.edu/blog/can-exercise-help-relieve-teen-depression-2016081010084', desc: 'The benefits of exercise for teen health.', publisher: 'Harvard Health Publishing', date: '2016, www.health.harvard.edu/blog/can-exercise-help-relieve-teen-depression-2016081010084' } ], 
+'s28': [ { title: 'Presidents Council on Sports, Fitness & Nutrition', link: 'https://health.gov/our-work/nutrition-physical-activity/presidents-council', desc: 'Official guidelines for youth physical activity.', publisher: 'U.S. Department of Health and Human Services / Office of Disease Prevention and Health Promotion', date: '2025, health.gov/our-work/nutrition-physical-activity/presidents-council' } ], 
+'s29': [ { title: 'Teens', link: 'https://www.myplate.gov/life-stages/teens', desc: 'Offers personalized nutrition plans, tips for balanced meals, hydration strategies and healthy snack ideas for teens', publisher: 'U.S. Department of Agriculture', date: '2026, www.myplate.gov/life-stages/teens' } ], 
+'s30': [ { title: 'Healthy Eating During Adolescence', link: 'https://www.hopkinsmedicine.org/health/wellness-and-prevention/healthy-eating-during-adolescence', desc: 'Healthy eating advice for teens.', publisher: 'The Food Trust', date: '2026, www.hopkinsmedicine.org/health/wellness-and-prevention/healthy-eating-during-adolescence' } ], 
+'s31': [ { title: 'The Hidden Risks Of Processed Foods In Children’s Diets', link: 'https://news.llu.edu/health-wellness/hidden-risks-processed-foods-childrens-diets', desc: 'Highlights long-term health consequences of processed food consumption and children and teens', publisher: 'Loma Linda University Health', date: '2025, news.llu.edu/health-wellness/hidden-risks-processed-foods-childrens-diets' } ], 
+'s32': [ { title: 'Fast Food vs. Healthy Food: The Ultimate Battle for Your Health', link: 'https://biteshealthy.com/fast-food-vs-healthy-food-the-ultimate-battle-for-your-health/', desc: 'Compares nutritional benefits of healthy eating with the risk of fast food, including obesity and chronic disease', publisher: 'BitesHealthy', date: '2026, biteshealthy.com/fast-food-vs-healthy-food-the-ultimate-battle-for-your-health/' } ], 
+'s33': [ { title: 'Heart Smarts', link: 'https://learning.thefoodtrust.org/for-learners/heart-smarts/', desc: 'Free resources and lesson plans to teach teens how to prepare nutritious, budget friendly meals', publisher: 'The Food Trust', date: '2026, learning.thefoodtrust.org/for-learners/heart-smarts/' } ], 
+'s34': [ { title: 'Nutrition Education for Teens', link: 'https://www.hungertaskforce.org/what-we-do/community-nutrition-education/nutrition-education-for-teens/', desc: 'Practical tips for healthy eating, easy recipes, and advice to fuel active teen lifestyle', publisher: 'Hunger Task Force', date: '2025, www.hungertaskforce.org/what-we-do/community-nutrition-education/nutrition-education-for-teens/' } ], 
+'s35': [ { title: 'For Tweens and Teens', link: 'https://www.nutrition.gov/topics/nutrition-age/teens/tweens-and-teens', desc: 'Games and resources for nutrition education.', publisher: 'Nutrition.gov / Federal Science and Nutrition', date: '2026, www.nutrition.gov/topics/nutrition-age/teens/tweens-and-teens' } ], 
+'s36': [ { title: 'Healthy Spaces for Youth', link: 'https://nutritionsource.hsph.harvard.edu/healthy-youth-spaces/', desc: 'Nutrition guidance and resources for teens.', publisher: 'Harvard T.H. Chan School of Public Health', date: '2026, nutritionsource.hsph.harvard.edu/healthy-youth-spaces/' } ], 
+'s37': [ { title: 'How Eating Fast Food Affects the Health of Teens', link: 'https://www.verywellhealth.com/how-eating-fast-food-affects-the-health-of-teens-3522416', desc: 'Explains how frequent fast food consumption impacts teen healthy and long term wellness.', publisher: 'Verywell Health', date: '2026, www.verywellhealth.com/how-eating-fast-food-affects-the-health-of-teens-3522416' } ], 
+'s38': [ { title: 'My Balanced Plate — Teens', link: 'https://www.ohsu.edu/sites/default/files/2022-08/DCH-My-Balanced-Plate-for-Teens.pdf', desc: 'A visual guide for teen on building balanced meals, with fruits vegetables, lean proteins, and whole grains', publisher: 'Oregon Health & Science University', date: '2022, www.ohsu.edu/sites/default/files/2022-08/DCH-My-Balanced-Plate-for-Teens.pdf' } ], 
+'s39': [ { title: 'How Do Ultra Processed Foods Affect My Child’s Health?', link: 'https://www.childrens.com/health-wellness/effects-of-ultraprocessed-foods-on-kids', desc: 'Discusses how ultra-processed foods like chips and sodas affect physical and mental health in youth', publisher: 'Childrens Health', date: '2025, www.childrens.com/health-wellness/effects-of-ultraprocessed-foods-on-kids' } ], 
+'s40': [ { title: 'Health, United States, 2019 – Health E-Stat: Fast Food Consumption', link: 'https://www.cdc.gov/nchs/data/hestat/hestat106.htm', desc: 'National statistics on fast food consumption among teens and its contribution to poor diet quality.', publisher: 'Centers for Disease Control and Prevention', date: '2026, www.cdc.gov/nchs/data/hestat/hestat106.htm' } ], 
+'s41': [ { title: 'Teens and Tweens: Healthy Eating Recommendations', link: 'https://www.eatright.org/for-teen', desc: 'Nutrition tips and resources for teens.', publisher: 'Academy of Nutrition and Dietetics', date: '2026, www.eatright.org/for-teen' } ], 
+'s42': [ { title: 'Healthy Eating for Teens', link: 'https://femalehealthawareness.org/en/healthy-eating-for-teens/', desc: 'Nutrition tips and requirements for teens.', publisher: 'Foundation for Female Health Awareness', date: '2025, femalehealthawareness.org/en/healthy-eating-for-teens/' } ], 
+'s43': [ { title: 'Healthy Eating for Teens (PDF)', link: 'https://healthengagement.kaiserpermanente.org/wp-content/uploads/18895-healthy-eating-for-teens-ada.pdf', desc: 'A comprehensive guide for teens on healthy eating habits, portion sizes, and reducing processed food intake', publisher: 'Kaiser Permanente', date: '2023, healthengagement.kaiserpermanente.org/wp-content/uploads/18895-healthy-eating-for-teens-ada.pdf' } ], 
+'s44': [ { title: 'Many Teens Are Turning to AI Chatbots for Friendship', link: 'https://www.apa.org/monitor/2025/10/technology-youth-friendships', desc: 'Research on digital friendships and emotional support.', publisher: 'American Psychological Association', date: '2025, www.apa.org/monitor/2025/10/technology-youth-friendships' } ], 
+'s45': [ { title: 'Mental Health Impacts of AI Companions', link: 'https://arxiv.org/pdf/2509.22505', desc: 'Examines how users form bonds with AI companion and the impact on mental health and social behavior', publisher: 'arXiv', date: '2025, arxiv.org/pdf/2509.22505' } ], 
+'s46': [ { title: 'Oxford Researchers Advocate For Comprehensive Framework To Study AI Impact On Youth Mental Health', link: 'https://www.ox.ac.uk/news/2025-01-22-oxford-researchers-advocate-comprehensive-framework-study-ais-impact-youth-mental', desc: 'Research on AI, empathy, and youth development.', publisher: 'Oxford Internet Institute', date: '2025, www.ox.ac.uk/news/2025-01-22-oxford-researchers-advocate-comprehensive-framework-study-ais-impact-youth-mental' } ], 
+'s47': [ { title: 'AI chatbots perpetuate biases when performing empathy, study finds', link: 'https://news.ucsc.edu/2025/03/ai-empathy/', desc: 'Study revealing biases in AI empathy responses and implication for fairness and inclusivity', publisher: 'University of California, Santa Cruz', date: '2025, news.ucsc.edu/2025/03/ai-empathy/' } ], 
+'s48': [ { title: 'Teen Active Listening Activities: 12 Fun Ways to Build Communication Skills', link: 'https://veryspecialtales.com/active-listening-activities-teens-students/', desc: 'Fun activities and worksheets to help teens practice active listening and improve interpersonal relationships', publisher: 'Very Special Tales', date: '2025, veryspecialtales.com/active-listening-activities-teens-students/' } ], 
+'s49': [ { title: 'Emotional Reliance on AI: Design, Dependency, and the Future of Human Connection', link: 'https://blog.citp.princeton.edu/2025/08/20/emotional-reliance-on-ai-design-dependency-and-the-future-of-human-connection/', desc: 'Discusses emotional reliance on AI companions and ethical concerns about replacing human relationships', publisher: 'Princeton Center for Information Technology Policy', date: '2025, blog.citp.princeton.edu/2025/08/20/emotional-reliance-on-ai-design-dependency-and-the-future-of-human-connection/' } ], 
+'s50': [ { title: 'SEL Toolkit: Social Awareness', link: 'https://actforyouth.org/program-toolkit/yd-activities/sel/social-aware.cfm', desc: 'Strategies and activities to teach empathy and active listening, fostering deeper human connections', publisher: 'ACT for Youth', date: '2026, actforyouth.org/program-toolkit/yd-activities/sel/social-aware.cfm' } ], 
+'s51': [ { title: '40 Empathy Activities & Worksheets for Students & Adults', link: 'https://positivepsychology.com/kindness-activities-empathy-worksheets/', desc: 'Comprehensive resources for building empathy and kindness through role-playing and reflective exercises', publisher: 'PositivePsychology.com', date: '2017, positivepsychology.com/kindness-activities-empathy-worksheets/' } ], 
+'s52': [ { title: '8 Creative Activities to Teach Empathy to Teens', link: 'https://realitypathing.com/8-creative-activities-to-teach-empathy-to-teens/', desc: 'Engaging activities to help teens understand others perspective and foster meaningful relationship', publisher: 'Reality Pathing', date: '2025, realitypathing.com/8-creative-activities-to-teach-empathy-to-teens/' } ], 
+'s53': [ { title: 'Human-AI Interaction Overview', link: 'https://www.media.mit.edu/projects/theme-human-ai/overview/', desc: 'Research on empathy and human-AI interaction.', publisher: 'MIT Media Lab', date: '2026, www.media.mit.edu/projects/theme-human-ai/overview/' } ], 
+'s54': [ { title: 'AI Companions Reduce Loneliness', link: 'https://www.hbs.edu/faculty/Pages/item.aspx?num=67360', desc: 'Evidence that AI companions can alleviate loneliness, but with caution about dependency risks', publisher: 'Harvard Business School', date: '2025, www.hbs.edu/faculty/Pages/item.aspx?num=67360' } ], 
+'s55': [ { title: 'Ethical Challenges of AI Chatbots: Privacy, Bias, and Transparency', link: 'https://dev.to/soulmaite/ethical-challenges-of-ai-chatbots-privacy-bias-and-transparency-ble', desc: 'Explores ethical issues in AI chatbot design, including data privacy and bias mitigation', publisher: 'DEV Community', date: '2025, dev.to/soulmaite/ethical-challenges-of-ai-chatbots-privacy-bias-and-transparency-ble' } ], 
+'s56': [ { title: 'Can an AI Chatbot Be Your Friend?', link: 'https://knowledge.wharton.upenn.edu/article/can-an-ai-chatbot-be-your-friend/', desc: 'Research on how empathetic AI chatbots can reduce loneliness and provide temporary emotional support', publisher: 'Knowledge at Wharton', date: '2024, knowledge.wharton.upenn.edu/article/can-an-ai-chatbot-be-your-friend/' } ], 
+'s57': [ { title: 'Synthetic Companions, Real Risks: Why AI Painkillers for Loneliness Need Evidence Before Scale', link: 'https://aibm.org/commentary/synthetic-companions-real-risks-why-ai-painkillers-for-loneliness-need-evidence-before-scale/', desc: 'policy analysis on AI companions as "digital painkillers" for loneliness and their dependency', publisher: 'American Institute for Boys and Men', date: '2025, aibm.org/commentary/synthetic-companions-real-risks-why-ai-painkillers-for-loneliness-need-evidence-before-scale/' } ], 
+'s58': [ { title: 'Is Technology Killing Empathy?', link: 'https://www.apa.org/news/podcasts/speaking-of-psychology/anti-empathy-machine', desc: 'Research on technology, empathy, and adolescent development.', publisher: 'American Psychological Association', date: '2022, www.apa.org/news/podcasts/speaking-of-psychology/anti-empathy-machine' } ], 
+'s59': [ { title: 'User Privacy Harms and Risks in Conversational AI (preprint)', link: 'https://arxiv.org/pdf/2402.09716', desc: 'Framework for understanding privacy risks in AI chatbots interactions and recommendations for safe use', publisher: 'arXiv', date: '2024, arxiv.org/pdf/2402.09716' } ], 
+'s60': [ { title: 'Prioritizing Active Learning Experiences', link: 'https://www.edutopia.org/article/prioritizing-active-learning-experiences/', desc: 'Strategies for active learning in teens.', publisher: 'Edutopia', date: '2024, www.edutopia.org/article/prioritizing-active-learning-experiences/' } ], 
+'s61': [ { title: 'Active Learning vs. Passive Learning: The Science-Backed Guide to Learning Smarter', link: 'https://myspeedreading.com/active-learning-vs-passive-learning/', desc: 'Explains why active learning methods like discussions and hands-on activities outperform passive approaches for retentions', publisher: 'MyspeedReading', date: '2025, myspeedreading.com/active-learning-vs-passive-learning/' } ], 
+'s62': [ { title: 'Doom Scrolling and Brain Rot: What Are They?', link: 'https://www.nationwidechildrens.org/family-resources-education/700childrens/2025/01/Doom Scrolling-and-brain-rot', desc: 'Explains how Doom Scrolling erodes attention span an critical thinking, leading to mental fatigue and emotional distress', publisher: 'Nationwide Children’s Hospital', date: '2025, www.nationwidechildrens.org/family-resources-education/700childrens/2025/01/Doom Scrolling-and-brain-rot' } ], 
+'s63': [ { title: 'Doom Scrolling and Teen Mental Health: Digital Overload', link: 'https://missionprephealthcare.com/mental-health-resources/parents-guide/Doom Scrolling/', desc: 'Discusses the link between Doom Scrolling and mental health struggles in adolescents, with tips for breaking the cycle', publisher: 'Mission Prep Healthcare', date: '2025, missionprephealthcare.com/mental-health-resources/parents-guide/Doom Scrolling/' } ], 
+'s64': [ { title: '25 Critical Thinking Apps For Extended Student Learning', link: 'https://www.teachthought.com/critical-thinking-posts/critical-thinking-apps/', desc: 'lists apps that promote extended critical thinking and creativity, helping students replace passive scrolling with intentional learning', publisher: 'TeachThought', date: '2026, www.teachthought.com/critical-thinking-posts/critical-thinking-apps/' } ], 
+'s65': [ { title: 'Boost Creativity & Thinking Skills with Educational Apps', link: 'https://www.iihglobal.com/blog/how-educational-apps-boost-creativity-and-critical-thinking/', desc: 'Explores how apps enhance creativity and critical thinking through adaptive learning and immersive experiences', publisher: 'IIHGlobal', date: '2024, www.iihglobal.com/blog/how-educational-apps-boost-creativity-and-critical-thinking/' } ], 
+'s66': [ { title: 'Active Learning Strategies', link: 'https://www.colorado.edu/center/teaching-learning/teaching-resources/learner-engagement/active-learning-strategies', desc: 'Practical strategies for fostering critical thinking and engagement through real-world problem solving and teamwork', publisher: 'University of Colorado Boulder', date: '2026, www.colorado.edu/center/teaching-learning/teaching-resources/learner-engagement/active-learning-strategies' } ], 
+'s67': [ { title: 'Tips for Teachers: Dealing with Plagiarism', link: 'https://www.learningscientists.org/blog/2016/7/28-1', desc: 'Evidence-based learning techniques for teens.', publisher: 'The Learning Scientists', date: '2016, www.learningscientists.org/blog/2016/7/28-1' } ], 
+'s68': [ { title: '12 Best Apps To Replace Doom Scrolling With Self-Improvement In 2025', link: 'https://geekvibesnation.com/12-best-apps-to-replace-Doom Scrolling-with-self-improvement-in-2025/', desc: 'List of apps for learning and self-growth.', publisher: 'Geek Vibes Nation', date: '2025, geekvibesnation.com/12-best-apps-to-replace-Doom Scrolling-with-self-improvement-in-2025/' } ], 
+'s69': [ { title: 'How I Replaced Doom Scrolling With Learning Using These Free Apps', link: 'https://www.howtogeek.com/how-i-replaced-Doom Scrolling-with-learning-using-these-free-apps/', desc: 'Personal guide to using free apps for short, focused learning sessions instead of endless scrolling', publisher: 'HowToGeek', date: '2025, www.howtogeek.com/how-i-replaced-Doom Scrolling-with-learning-using-these-free-apps/' } ], 
+'s70': [ { title: 'Stop Doom-Scrolling, Start Microlearning: This App Helps You Make The Switch', link: 'https://www.blinkist.com/magazine/posts/stop-doom-scrolling-start-microlearning', desc: 'Offers strategies and apps to replace Doom Scrolling with bite-sized learning sessions for better mental well-being', publisher: 'Blinkist Magazine', date: '2023, www.blinkist.com/magazine/posts/stop-doom-scrolling-start-microlearning' } ], 
+'s71': [ { title: 'Is Doom Scrolling quietly damaging teen brains? Scientists warn it is more than just a waste of time', link: 'https://economictimes.indiatimes.com/magazines/panaches/is-Doom Scrolling-quietly-damaging-teen-brains-scientist-warm-it-is-more-than-just-a-waste-of-time/articleshow/121746535.cms', desc: 'Research showing how prolonged Doom Scrolling doubles anxiety risk and quadruples depression risk in teens', publisher: 'The Economic Times', date: '2025, economictimes.indiatimes.com/magazines/panaches/is-Doom Scrolling-quietly-damaging-teen-brains-scientist-warm-it-is-more-than-just-a-waste-of-time/articleshow/121746535.cms' } ], 
+'s72': [ { title: 'Screen Media Exposure and Obesity in Children and Adolescents', link: 'https://publications.aap.org/pediatrics/article/140/Supplement_2/S97/34144/Screen-Time-and-Learning', desc: 'Research on screen time and learning in teens.', publisher: 'American Academy of Pediatrics', date: '2017, publications.aap.org/pediatrics/article/140/Supplement_2/S97/34144/Screen-Time-and-Learning' } ], 
+'s73': [ { title: '33 active learning activities and strategies for engaging learners', link: 'https://www.sessionlab.com/blog/active-learning-activities-and-strategies/', desc: 'A comprehensive guide to active learning techniques that encourages curiosity-driven exploration and skill acquisition', publisher: 'SessionLab', date: '2025, www.sessionlab.com/blog/active-learning-activities-and-strategies/' } ], 
+'s74': [ { title: 'Teens, Social Media and Technology 2024', link: 'https://www.pewresearch.org/internet/2024/12/12/teens-social-media-and-technology-2024/', desc: 'Latest data on teen technology use, mental health trends, and digital behaviors.', publisher: 'Pew Research Center', date: '2024, www.pewresearch.org/internet/2024/12/12/teens-social-media-and-technology-2024/' } ], 
+'s75': [ { title: 'Digital Media Use and Mental Health in Adolescents', link: 'https://doi.org/10.3389/fpubh.2021.793868', desc: 'Reviews current research on digital media’s impact on psychological wellbeing.', publisher: 'Frontiers in Psychology', date: '2026, doi.org/10.3389/fpubh.2021.793868' } ], 
+'s76': [ { title: 'Mental Health', link: 'https://www.cdc.gov/healthy-youth/mental-health/index.html', desc: 'Covers mental health statistics, risk factors, and prevention strategies for teens.', publisher: 'Centers for Disease Control and Prevention', date: '2024, www.cdc.gov/healthy-youth/mental-health/index.html' } ], 
+'s77': [ { title: 'Mental health of adolescents', link: 'https://www.who.int/news-room/fact-sheets/detail/adolescent-mental-health', desc: 'Global perspective on mental health challenges and digital risks for youth.', publisher: 'World Health Organization', date: '2025, www.who.int/news-room/fact-sheets/detail/adolescent-mental-health' } ], 
+'s78': [ { title: 'Adolescent Mental Health Hub', link: 'https://www.unicef.org/stories/lets-talk-about-mental-health', desc: 'Resources and research on digital wellbeing, cyberbullying, and mental health support.', publisher: 'UNICEF', date: '2026, www.unicef.org/stories/lets-talk-about-mental-health' } ], 
+'s79': [ { title: 'Mindfulness Activities For Teens And Students', link: 'https://www.medicalnewstoday.com/articles/mindfulness-activities-for-teens', desc: 'Activities to help students manage stress and digital distractions.', publisher: 'Medical News Today', date: '2024, www.medicalnewstoday.com/articles/mindfulness-activities-for-teens' } ], 
+'s80': [ { title: 'Adolescent Social Media Use and Mental Health in the Environmental Influences on Child Health Outcomes Study', link: 'https://doi.org/10.1016/j.jadohealth.2024.12.003', desc: 'Explores links between social media use and mental health outcomes.', publisher: 'Journal of Adolescent Health', date: '2026, doi.org/10.1016/j.jadohealth.2024.12.003' } ], 
+'s81': [ { title: 'Association Between Screen Time and Childrens Mental Health', link: 'https://doi.org/10.1001/jamapediatrics.2018.5056', desc: 'Examines the relationship between screen time and anxiety, depression, and sleep.', publisher: 'JAMA Pediatrics', date: '2024, doi.org/10.1001/jamapediatrics.2018.5056' } ], 
+'s82': [ { title: 'The Impact of Social Media on Teens', link: 'https://www.commonsensemedia.org/press-releases/statement-on-us-surgeon-generals-warning-about-the-impact-of-social-media-on-teens', desc: 'Research and practical tips for families and educators on managing technology use.', publisher: 'Common Sense Media', date: '2026, www.commonsensemedia.org/press-releases/statement-on-us-surgeon-generals-warning-about-the-impact-of-social-media-on-teens' } ], 
+'s83': [ { title: 'Social Media and Teen Mental Health (Press Release)', link: 'https://www.apa.org/monitor/2024/04/teen-social-use-mental-health', desc: 'Explores the psychological effects of social media and technology use among adolescents.', publisher: 'American Psychological Association', date: '2025, www.apa.org/monitor/2024/04/teen-social-use-mental-health' } ], 
+'s84': [ { title: 'Social Media and Self-Doubt', link: 'https://childmind.org/article/social-media-and-self-doubt/', desc: 'Guidance for parents and educators on supporting teens’ mental health in the digital age.', publisher: 'Child Mind Institute', date: '2025, childmind.org/article/social-media-and-self-doubt/' } ], 
+'s85': [ { title: 'Technology and Mental Health: A Complex Relationship', link: 'https://mhanational.org/technology-mental-health-report/', desc: 'Toolkit for understanding and managing technology’s effects on mental health.', publisher: 'Mental Health America', date: '2026, mhanational.org/technology-mental-health-report/' } ], 
+'s86': [ { title: 'Mindfulness for Students', link: 'https://ggie.berkeley.edu/student-well-being/mindfulness-for-students/', desc: 'Structured mindfulness practices like breathing exercises and mindful listening  for teens', publisher: 'Greater Good in Education', date: '2025, ggie.berkeley.edu/student-well-being/mindfulness-for-students/' } ], 
+'s87': [ { title: '15+ Centering Mindfulness Activities for High School Students', link: 'https://blog.teacherspayteachers.com/mindfulness-activities-for-high-school-students/', desc: 'Quick mindfulness activities like body scans and reflective journaling for stress relief', publisher: 'Teachers Pay Teachers Blog', date: '2025, blog.teacherspayteachers.com/mindfulness-activities-for-high-school-students/' } ], 
+'s88': [ { title: 'Brain health risks from multitasking and digital overload', link: 'https://lonestarneurology.net/others/the-neurological-effects-of-chronic-multitasking-and-digital-overload/', desc: 'Discusses neurological effects of multitasking and digital overload on focus and decision making', publisher: 'Lone Star Neurology', date: '2025, lonestarneurology.net/others/the-neurological-effects-of-chronic-multitasking-and-digital-overload/' } ], 
+'s89': [ { title: 'Mindful Breathing Reflection', link: 'https://www.lenny.org/lesson/mindful-breathing-reflection-QTC2jT?next=/lesson/mindful-breathing-reflection-QTC2jT', desc: 'Combines breathing exercises with gratitude journals to foster positivity  and mental clarity', publisher: 'Lenny Learning', date: '2026, www.lenny.org/lesson/mindful-breathing-reflection-QTC2jT?next=/lesson/mindful-breathing-reflection-QTC2jT' } ], 
+'s90': [ { title: 'Mindfulness QuickStart Brochure for Middle and High School Settings', link: 'https://www.apaf.org/our-programs/schools/free-resources/mindfulness-QuickStart-brochure/', desc: 'Free brochure with simple mindfulness activities for teens', publisher: 'APA Foundation', date: '2026, www.apaf.org/our-programs/schools/free-resources/mindfulness-QuickStart-brochure/' } ], 
+'s91': [ { title: 'Mindfulness Apps Every Teen Should Try', link: 'https://realitypathing.com/mindfulness-apps-every-teen-should-try/', desc: 'Lists popular mindfulness apps for stress reduction and focus', publisher: 'Reality Pathing', date: '2025, realitypathing.com/mindfulness-apps-every-teen-should-try/' } ], 
+'s92': [ { title: 'Technology Addiction in Youth: A Helpful Guide for Parents', link: 'https://teenchallengeusa.org/technology-addiction-in-youth-a-helpful-guide-for-parents/', desc: 'Explains how tech addiction impacts mental health and offers strategies for balance', publisher: 'Adult & Teen Challenge', date: '2026, teenchallengeusa.org/technology-addiction-in-youth-a-helpful-guide-for-parents/' } ], 
+'s93': [ { title: 'Discover Inner Peace: The Top 7 Mindfulness Apps For Teens in 2026', link: 'https://www.mindfulbrowsing.com/mindfulness-apps-for-teens/', desc: 'Reviews top mindfulness apps for teens with guided meditation and breathing exercises', publisher: 'Mindful Browsing', date: '2026, www.mindfulbrowsing.com/mindfulness-apps-for-teens/' } ], 
+'s94': [ { title: 'Mindfulness Websites for Students: Your Complete Guide', link: 'https://calmripple.com/mindfulness-websites-for-students/', desc: 'A guide to digital mindfulness resources and apps for managing anxiety and boosting focus', publisher: 'Calm Ripple', date: '2025, calmripple.com/mindfulness-websites-for-students/' } ], 
+'s95': [ { title: 'Mindfulness for Reducing Distractions: Effective Focus Techniques and Study Strategies for High School Exam Prep', link: 'https://www.teachthemtostudy.com/articles/mindfulness-reducing-distractions-focus-techniques-exam-prep', desc: 'Practical strategies for improving concentration and reducing stress during study sessions', publisher: 'Teach Them to Study', date: '2024, www.teachthemtostudy.com/articles/mindfulness-reducing-distractions-focus-techniques-exam-prep' } ], 
+'s96': [ { title: 'Mindfulness Activities for Teens', link: 'https://www.carepatron.com/guides/mindfulness-activities-for-teens', desc: 'Activities and worksheets for stress reduction.', publisher: 'Carepatron', date: '2026, www.carepatron.com/guides/mindfulness-activities-for-teens' } ], 
+'s97': [ { title: 'Practicing Mindfulness through Kindness and Compassion', link: 'https://www.nami.org/blog/practicing-mindfulness-through-kindness-and-compassion/', desc: 'Mindfulness strategies for youth mental health.', publisher: 'National Alliance on Mental Illness (NAMI)', date: '2016, www.nami.org/blog/practicing-mindfulness-through-kindness-and-compassion/' } ], 
+'s98': [ { title: 'Making Teens More Mindful', link: 'https://greatergood.berkeley.edu/article/item/making_teens_more_mindful', desc: 'Mindfulness practices and resources for teens.', publisher: 'Greater Good Science Center', date: '2015, greatergood.berkeley.edu/article/item/making_teens_more_mindful' } ], 
+'s99': [ { title: 'Mindfulness Tools for Teens', link: 'https://www.headspace.com/mindfulness/mindfulness-101?origin=mindfulness-cat', desc: 'Mindfulness tools and resources for teens.', publisher: 'Headspace', date: '2026, www.headspace.com/mindfulness/mindfulness-101?origin=mindfulness-cat' } ], 
+'s100': [ { title: 'Digital Stress and Cognitive Overload In Adolescents: Neurodevelopmental and Psychosocial Pathways To Mental Health', link: 'https://www.extensionjournal.com/uploads/archives/8-12-17-335.pdf', desc: 'Research on how constant notifications and multitasking harm teen mental health and attention', publisher: 'International Journal of Agriculture Extension and Social Development', date: '2025, www.extensionjournal.com/uploads/archives/8-12-17-335.pdf' } ], 
+'s101': [ { title: 'How to Help Kids Balance Phones and Screens with Sleep', link: 'https://www.commonsensemedia.org/articles/how-to-help-kids-balance-phones-and-screens-with-sleep', desc: 'Tips for managing device notification and reducing distractions for teens', publisher: 'Common Sense Media', date: '2026, www.commonsensemedia.org/articles/how-to-help-kids-balance-phones-and-screens-with-sleep' } ], 
+'s102': [ { title: 'Top 5 Apps to Support Teen Mental Health and Mindfulness', link: 'https://crownadolescenthealth.com/top-5-apps-to-support-teen-mental-health-and-mindfulness/', desc: 'Hilights apps designed for teen to manage stress and build mindfulness habits', publisher: 'Crown Adolescent Health', date: '2025, crownadolescenthealth.com/top-5-apps-to-support-teen-mental-health-and-mindfulness/' } ], 
+'s103': [ { title: 'UNICEF Youth Advocacy Guide', link: 'https://www.unicef.org/youthledaction/media/216/file/UNICEF_YouthAdvocacyGuide_ENG.pdf', desc: 'A comprehensive guide for teens on creating impactful advocacy campaigns using digital tools', publisher: 'UNICEF', date: '2026, www.unicef.org/youthledaction/media/216/file/UNICEF_YouthAdvocacyGuide_ENG.pdf' } ], 
+'s104': [ { title: 'Youth Service Knowledge Center', link: 'https://ysa.org/resources/', desc: 'Community service resources for teens.', publisher: 'Youth Service America', date: '2026, ysa.org/resources/' } ], 
+'s105': [ { title: 'Youth Activism in the Digital Age ', link: 'https://online.utpb.edu/about-us/articles/sociaology/youth-activism-in-the-digital-age/', desc: 'Discusses how technology empowers youth activism and provides examples of successful online movement', publisher: 'University of Texas Permian Basin Online', date: '2024, online.utpb.edu/about-us/articles/sociaology/youth-activism-in-the-digital-age/' } ], 
+'s106': [ { title: 'Advocacy and Activism Online', link: 'https://digitalwellnesslab.org/research-briefs/advocacy-and-activism-online/', desc: 'Research on the effectiveness of online activism and its psychological impact on teens', publisher: 'Digital Wellness Lab', date: '2024, digitalwellnesslab.org/research-briefs/advocacy-and-activism-online/' } ], 
+'s107': [ { title: 'Community Engagement: How Volunteer and Service Activities Benefit Students', link: 'https://varthana.com/school/how-volunteer-and-service-activities-benefit-students', desc: 'Explains how volunteering benefits students by fostering empathy, leadership, and community connections', publisher: 'Varthana', date: '2024, varthana.com/school/how-volunteer-and-service-activities-benefit-students' } ], 
+'s108': [ { title: 'How Volunteering Builds Leadership Skills In Teenagers', link: 'https://volunteersforyouth.com/how-volunteering-builds-leadership-skills-in-teenagers/', desc: 'Details how volunteering strengthens leadership qualities and emotional intelligence in teens', publisher: 'Volunteers for Youth', date: '2026, volunteersforyouth.com/how-volunteering-builds-leadership-skills-in-teenagers/' } ], 
+'s109': [ { title: 'Benefits Of Involving Teens In Community Service During Adolescence', link: 'https://realitypathing.com/benefits-of-involving-teens-in-community-service-during-adolescence/', desc: 'Explores psychological and social benefits of volunteering during adolescence', publisher: 'Reality Pathing', date: '2026, realitypathing.com/benefits-of-involving-teens-in-community-service-during-adolescence/' } ], 
+'s110': [ { title: 'The Impact of Student Volunteering: Skills, Service, and Community', link: 'https://www.educatly.com/blog/703/the-impact-of-student-volunteering-skills-service-and-community', desc: 'Highlights how volunteering develops practical skills and creates measurable community impact', publisher: 'Educatly', date: '2025, www.educatly.com/blog/703/the-impact-of-student-volunteering-skills-service-and-community' } ], 
+'s111': [ { title: 'Support Teens Interest in Online Activism', link: 'https://www.internetmatters.org/hub/questions/conversations-to-have-with-teens-about-online-activism/', desc: 'Guidance for teens on engagement in online activism safely,addressing risks like slacktivism and echo chambers while promoting meaningful participation', publisher: 'Internet Matters', date: '2025, www.internetmatters.org/hub/questions/conversations-to-have-with-teens-about-online-activism/' } ], 
+'s112': [ { title: 'Teens & Volunteer Opportunities', link: 'https://www.pointsoflight.org/teens/', desc: 'Toolkit for teen volunteering and community service.', publisher: 'Points of Light', date: '2026, www.pointsoflight.org/teens/' } ], 
+'s113': [ { title: 'Virtual Volunteering Opportunities: Making an Impact from Home', link: 'https://www.cirkledin.com/library/extracurricular-activities-and-leadership/virtual-volunteering-teens-online-community-service/', desc: 'Guide to online volunteering for teens.', publisher: 'Cirkled In', date: '2025, www.cirkledin.com/library/extracurricular-activities-and-leadership/virtual-volunteering-teens-online-community-service/' } ], 
+'s114': [ { title: 'DoSomething.org: Fueling Young People to Change the World', link: 'https://www.dosomething.org/us', desc: 'Resources for youth activism and engagement.', publisher: 'DoSomething.org', date: '2026, www.dosomething.org/us' } ], 
+'s115': [ { title: 'Public Social Networks Versus Private Online Communities', link: 'https://hivebrite.io/downloads/public-vs-private-social-media/', desc: 'Compares public social platforms with private communities highlighting how public spaces prioritize reach, algorithms, and performance identify over authing engagement', publisher: 'Hivebrite', date: '2026, hivebrite.io/downloads/public-vs-private-social-media/' } ], 
+'s116': [ { title: 'How Social Media Shapes Our Identity', link: 'https://www.clrn.org/how-social-media-shapes-our-identity/#google_vignette', desc: 'Explores how social media reshapes identity through curated personas and public metrics like likes and followers', publisher: 'CLRN Team', date: '2025, www.clrn.org/how-social-media-shapes-our-identity/#google_vignette' } ], 
+'s117': [ { title: 'How to Set Up an Extremely Secure Private Group Chat', link: 'https://thelinuxcode.com/how-to-set-up-an-extremely-secure-private-group-chat/#google_vignette', desc: 'Guide to creating private group chat using open-source tools for maximum security and confidentiality', publisher: 'The Linux Code', date: '2026, thelinuxcode.com/how-to-set-up-an-extremely-secure-private-group-chat/#google_vignette' } ], 
+'s118': [ { title: '7 Best Encrypted Chat Security & Privacy Features', link: 'https://www.mirrorfly.com/blog/chat-privacy/', desc: 'Explains encryption protocols and privacy features in modern chat apps to ensure safe group communications', publisher: 'MirrorFly', date: '2025, www.mirrorfly.com/blog/chat-privacy/' } ], 
+'s119': [ { title: 'Teen Identity Theft', link: 'https://fosi.org/wp-content/uploads/2025/03/5f7261614c3279856a625542_Teen_Identity_Theft_Full_Report_Nov_13.pdf', desc: 'Reveals that while American teenagers are increasingly concerned about online identity theft and privacy, they often underestimate their personal vulnerability and could take more proactive steps to secure their digital information.', publisher: 'Family Online Safety Institute', date: '2013, fosi.org/wp-content/uploads/2025/03/5f7261614c3279856a625542_Teen_Identity_Theft_Full_Report_Nov_13.pdf' } ], 
+'s120': [ { title: 'Best Chat Apps: What Parents, Educators & Students Need to Know', link: 'https://www.smartsocial.com/post/messenger-app-comparison', desc: 'Reviews popular group apps like GroupMe and WhatsApp, which pros and cons of privacy and safety', publisher: 'Smart Social', date: '2023, www.smartsocial.com/post/messenger-app-comparison' } ], 
+'s121': [ { title: 'Adolescents and Trust in Online Social Interactions: A Qualitative Exploratory Study', link: 'https://www.mdpi.com/2227-9067/10/8/1408', desc: 'Research on how teens build trust in online spaces, preferring private group for shared interest and safety', publisher: 'MDPI', date: '2023, www.mdpi.com/2227-9067/10/8/1408' } ], 
+'s122': [ { title: 'The Comparison Trap: Teaching Teens to Navigate Social Media Without Losing Self-Worth', link: 'https://epiccounselingsolutions.com/the-comparison-trap-teaching-teens-to-navigate-social-media-without-losing-self-worth/', desc: 'Discusses how highlight reels and algorithm-driven content create unrealistic standards and pressure for teens', publisher: 'EPIC Counseling Solutions', date: '2026, epiccounselingsolutions.com/the-comparison-trap-teaching-teens-to-navigate-social-media-without-losing-self-worth/' } ], 
+'s123': [ { title: 'Meta: Introducing Stricter Message Settings for Teens on Instagram and Facebook', link: 'https://about.fb.com/news/2024/01/introducing-stricter-message-settings-for-teens-on-instagram-and-facebook/', desc: 'Latest privacy and safety updates for teens.', publisher: 'Meta', date: '2024, about.fb.com/news/2024/01/introducing-stricter-message-settings-for-teens-on-instagram-and-facebook/' } ], 
+'s124': [ { title: 'Teaching Kids to Protect Their Data and Privacy Online', link: 'https://www.commonsensemedia.org/articles/teaching-kids-to-protect-their-data-and-privacy-online', desc: 'Tips for kids and teens to keep their information safe and private when they use tech.', publisher: 'Common Sense Media', date: '2024, www.commonsensemedia.org/articles/teaching-kids-to-protect-their-data-and-privacy-online' } ], 
+'s125': [ { title: 'Best Messaging Apps and Websites for Students, Teachers, and Parents', link: 'https://www.commonsense.org/education/lists/best-messaging-apps-and-websites-for-students-teachers-and-parents', desc: 'Curated list of secure messaging apps for students, emphasizing privacy and group communication features', publisher: 'Common Sense Education', date: '2026, www.commonsense.org/education/lists/best-messaging-apps-and-websites-for-students-teachers-and-parents' } ], 
+'s126': [ { title: 'Understanding Social Comparison on Social Media', link: 'https://jedfoundation.org/resource/understanding-social-comparison-on-social-media/', desc: 'Explains how curated content and public validation affect teen self-esteem and emotional well-being', publisher: 'JED Foundation', date: '2026, jedfoundation.org/resource/understanding-social-comparison-on-social-media/' } ], 
+'s127': [ { title: 'Teens and Social Media Fact Sheet', link: 'https://www.pewresearch.org/internet/fact-sheet/teens-and-social-media-fact-sheet/', desc: 'Latest data on teen social media usage, platform popularity, and behavioral trends, including the pressure of likes and followers', publisher: 'Pew Research Center', date: '2025, www.pewresearch.org/internet/fact-sheet/teens-and-social-media-fact-sheet/' } ], 
+'s128': [ { title: 'Safe and Responsible Social Networking: Strategies for Keeping Yourself Safe Online', link: 'https://cyberbullying.org/safe-and-responsible-social-networking-strategies-for-keeping-yourself-safe-online', desc: 'Information on social posting and private messaging among teens.', publisher: 'Cyberbullying Research Center', date: '2009, cyberbullying.org/safe-and-responsible-social-networking-strategies-for-keeping-yourself-safe-online' } ], 
+'s129': [ { title: 'Circadian Rhythm and Melatonin: How They Regulate Sleep', link: 'https://biologyinsights.com/circadian-rhythm-and-melatonin-how-they-regulate-sleep/', desc: 'Covers the relationship between melatonin and sleep cycle', publisher: 'Biology Insights', date: '2025, biologyinsights.com/circadian-rhythm-and-melatonin-how-they-regulate-sleep/' } , 
+{ title: 'Circadian Rhythms', link: 'https://www.nigms.nih.gov/education/fact-sheets/Pages/circadian-rhythms', desc: 'Explain how biological clock works', publisher: 'National Institute of General Medical Sciences', date: '2025, www.nigms.nih.gov/education/fact-sheets/Pages/circadian-rhythms' } ], 
+'s130': [ { title: '10 Sleep Tips for Teens', link: 'https://sleepaction.org/learn-about-sleep/10-sleep-tips-for-teens/', desc: 'Checklist and booklet for teens to improve sleep.', publisher: 'Sleep Action', date: '2025, sleepaction.org/learn-about-sleep/10-sleep-tips-for-teens/' } , 
+{ title: 'Establish Healthy Sleep Habits in Teens with These Tips', link: 'https://theparentingpro.com/sleep-hygiene-for-teens/', desc: 'Practical advice for teens on sleep hygiene, screen time, and stress management.', publisher: 'The Parenting Pro', date: '2025, theparentingpro.com/sleep-hygiene-for-teens/' } , 
+{ title: 'Sleep Quality and Social Media', link: 'https://www.aap.org/en/patient-care/media-and-children/center-of-excellence-on-social-media-and-youth-mental-health/qa-portal/qa-portal-library/qa-portal-library-questions/sleep-quality-and-social-media/?srsltid=AfmBOoohhqDQFtsPMFYgllk9xILfaqCKUlTVxjSHDZGek7-_wKMYolT4', desc: 'Guidance on healthy sleep habits for teenagers.', publisher: 'American Academy of Pediatrics', date: '2024, www.aap.org/en/patient-care/media-and-children/center-of-excellence-on-social-media-and-youth-mental-health/qa-portal/qa-portal-library/qa-portal-library-questions/sleep-quality-and-social-media/?srsltid=AfmBOoohhqDQFtsPMFYgllk9xILfaqCKUlTVxjSHDZGek7-_wKMYolT4' } , 
+{ title: 'Teens and Sleep', link: 'https://doi.org/10.1093/pch/13.1.69', desc: 'Information on why sleep is important for teens and how to improve sleep habits.', publisher: 'Paediatrics & Child Health', date: '2008, doi.org/10.1093/pch/13.1.69' } ], 
+'s131': [ { title: 'Blue Light and Late-Night Streaming: Sleep Risks You Need to Know Before Your Next Binge', link: 'https://blulites.com/blue-light-and-late-night-streaming-sleep-risks/', desc: 'Discusses how binge-watching and blue light exposure delay melatonin', publisher: 'BluLites', date: '2025, blulites.com/blue-light-and-late-night-streaming-sleep-risks/' } , 
+{ title: 'Screen Use Disrupts Precious Sleep Time', link: 'https://www.thensf.org/screen-use-disrupts-precious-sleep-time/', desc: 'Science-backed explanation on how screen blue light interference with circadian Rhythm and Melatonin', publisher: 'National Sleep Foundation', date: '2022, www.thensf.org/screen-use-disrupts-precious-sleep-time/' } , 
+{ title: 'Your Late-Night TV Binge Could Sabotage Your Brain Health Doctor Warns', link: 'https://www.foxnews.com/health/your-late-night-tv-binge-could-sabotage-your-brain-health-doctor-warns', desc: 'Explores the benefits of unplugging and strategies for sleep', publisher: 'Fox News', date: '2025, www.foxnews.com/health/your-late-night-tv-binge-could-sabotage-your-brain-health-doctor-warns' } ], 
+'s132': [ { title: '6 Compassionate Strategies to Help Teens Reduce Screen Time', link: 'https://lightfully.com/6-compassionate-strategies-to-help-teens-reduce-screen-time/', desc: 'Gentle, practical tips for limiting device use before bed and promoting offline activates', publisher: 'Lightfully', date: '2025, lightfully.com/6-compassionate-strategies-to-help-teens-reduce-screen-time/' } , 
+{ title: 'Digital Detox for Students: Balancing Online & Offline Learning', link: 'https://www.openeducationportal.com/digital-detox-for-students/', desc: 'Explores the benefits of unplugging and strategies for sleep', publisher: 'Open Education Portal', date: '2026, www.openeducationportal.com/digital-detox-for-students/' } ], 
+'s133': [ { title: '15 Sleep Hygiene Tips for Students', link: 'https://www.gentleobservations.com/post/15-sleep-hygiene-tips-every-school-counselor-should-share-with-students', desc: 'Practical strategies for better sleep', publisher: 'Gentle Observations', date: '2025, www.gentleobservations.com/post/15-sleep-hygiene-tips-every-school-counselor-should-share-with-students' } , 
+{ title: 'CHOC Children', link: 'https://choc.org/wp-content/uploads/2016/04/Sleep-Hygiene-Teen-Handout.pdf', desc: 'Sleep Hygiene for Teens', publisher: 'CHOC', date: '2026, choc.org/wp-content/uploads/2016/04/Sleep-Hygiene-Teen-Handout.pdf' } , 
+{ title: 'Lets Sleep', link: 'https://www.letssleep.org', desc: 'Interactive Resources for teens', publisher: 'Lets Sleep', date: '2026, www.letssleep.org' } , 
+{ title: 'Sleep Hygiene for Teens: Proven Ways for Teens to Get Better Sleep', link: 'https://www.daniel-wong.com/2025/11/18/sleep-hygiene-for-teens/', desc: 'Actionable strategies for teens to improve sleep quality.', publisher: 'Daniel Wong (on personal blog)', date: '2025, www.daniel-wong.com/2025/11/18/sleep-hygiene-for-teens/' } , 
+{ title: 'Teen Sleep Toolkit', link: 'https://www.thensf.org/teen-sleep-toolkit/', desc: 'Explains circadian Rhythm', publisher: 'National Sleep Foundation', date: '2024, www.thensf.org/teen-sleep-toolkit/' } ], 
+'s134': [ { title: 'The Stanford Adolescents and Social Media Initiative', link: 'https://cyber.fsi.stanford.edu/content/adolescents-social-sml', desc: 'Research on social media’s impact on adolescent development.', publisher: 'Stanford University', date: '2026, cyber.fsi.stanford.edu/content/adolescents-social-sml' } ], 
+'s135': [ { title: 'Social Media and Mental Health', link: 'https://childmind.org/article/how-using-social-media-affects-teenagers/', desc: 'How social media affects teen mental health.', publisher: 'Child Mind Institute', date: '2026, childmind.org/article/how-using-social-media-affects-teenagers/' } ], 
+'s136': [ { title: 'Social Media and Your Child', link: 'https://www.aacap.org/AACAP/Families_and_Youth/Facts_for_Families/FFF-Guide/Social-Media-and-Teens-100.aspx', desc: 'Guidance on social media use for teens.', publisher: 'American Academy of Child and Adolescent Psychiatry', date: '2025, www.aacap.org/AACAP/Families_and_Youth/Facts_for_Families/FFF-Guide/Social-Media-and-Teens-100.aspx' } ], 
+'s137': [ { title: 'Teens, Social Media and Technology 2024', link: 'https://www.pewresearch.org/internet/2024/12/12/teens-social-media-and-technology-2024/', desc: 'Latest survey data on teen social media use.', publisher: 'Pew Research Center', date: '2024, www.pewresearch.org/internet/2024/12/12/teens-social-media-and-technology-2024/' } ], 
+'s138': [ { title: 'Internet Addiction: A Brief Summary of Research and Practice', link: 'https://doi.org/10.2174/157340012803520513', desc: 'Studies on internet addiction and its neurological and psychological effects.', publisher: 'National Institutes of Health (PubMed Central)', date: '2026, doi.org/10.2174/157340012803520513' } ], 
+'s139': [ { title: 'Digital Addictions: A Family Guide to Prevention, Signs, and Treatment', link: 'https://www.childrenandscreens.org/learn-explore/research/digital-addictions-a-family-guide-to-prevention-signs-and-treatment/', desc: 'Easy-to-read family guide on recognizing and addressing digital addiction across technology use.', publisher: 'Children and Screens', date: '2025, www.childrenandscreens.org/learn-explore/research/digital-addictions-a-family-guide-to-prevention-signs-and-treatment/' } ], 
+'s140': [ { title: 'Mental Health America: Technology and Teen Mental Health Toolkit', link: 'https://mhanational.org/technology-and-teen-mental-health', desc: 'Toolkit for understanding and managing technology addiction in teens.', publisher: 'Mental Health America', date: '2025, mhanational.org/technology-and-teen-mental-health' } ], 
+'s141': [ { title: 'Digital Health and Well-Being – Q&A', link: 'who.int/health-topics/digital-health', desc: 'Global recommendations for managing digital exposure and preventing technology addiction.', publisher: 'World Health Organization', date: '2026, health-topics/digital-health' } ], 
+'s142': [ { title: 'Gaming Disorder', link: 'https://doi.org/10.1556/2006.6.2017.039', desc: 'Peer-reviewed research on gaming addiction and its impact on adolescent mental health.', publisher: 'Journal of Behavioral Addictions', date: '2017, doi.org/10.1556/2006.6.2017.039' } ], 
+'s143': [ { title: 'Screen Time for Teens: How to Support Healthy Tech Habits', link: 'https://www.teachercreatedmaterials.com/free-spirit-publishing/blog/screen-time-for-teens-how-to-support-healthy-tech-habits', desc: 'Practical guide on managing tech use and building balanced screen habits for teens.', publisher: 'Teacher Created Materials', date: '2025, www.teachercreatedmaterials.com/free-spirit-publishing/blog/screen-time-for-teens-how-to-support-healthy-tech-habits' } ], 
+'s144': [ { title: 'Technology Addiction', link: 'https://www.commonsensemedia.org/sites/default/files/research/report/csm_2016_technology_addiction_research_brief_0.pdf', desc: 'Practical tips for parents and teens to manage technology addiction and screen time.', publisher: 'Common Sense Media', date: '2016, www.commonsensemedia.org/sites/default/files/research/report/csm_2016_technology_addiction_research_brief_0.pdf' } ], 
+'s145': [ { title: 'Screen Addiction Explained: Effects and Coping Strategies', link: 'https://www.addictioncenter.com/behavioral-addictions/screen-addiction/', desc: 'Overview of what screen addiction is and how excessive device use can affect teens’ daily life and coping strategies.', publisher: 'Addiction Center', date: '2025, www.addictioncenter.com/behavioral-addictions/screen-addiction/' } ], 
+'s146': [ { title: 'Associations Between Screen Time Use and Health Outcomes Among US Teenagers', link: 'https://dx.doi.org/10.5888/pcd22.240537', desc: 'Guidelines on healthy screen time and its impact on physical and mental health.', publisher: 'Centers for Disease Control and Prevention', date: '2026, dx.doi.org/10.5888/pcd22.240537' } ], 
+'s147': [ { title: 'What is Technology Addiction?', link: 'https://www.psychiatry.org/patients-families/technology-addictions-social-media-and-more/what-is-technology-addiction', desc: 'Research on how technology addiction affects mental health and coping strategies.', publisher: 'American Psychological Association', date: '2026, www.psychiatry.org/patients-families/technology-addictions-social-media-and-more/what-is-technology-addiction' } ], 
+'s148': [ { title: 'Teens and Social Media Use: What is the Impact?', link: 'https://www.mayoclinic.org/healthy-lifestyle/tween-and-teen-health/in-depth/teens-and-social-media-use/art-20474437', desc: 'Easy-to-read summary of how social media patterns link with teen mental health outcomes.', publisher: 'Mayo Clinic', date: '2026, www.mayoclinic.org/healthy-lifestyle/tween-and-teen-health/in-depth/teens-and-social-media-use/art-20474437' } ], 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        }
+    };
+
+
+
+
+
+
+
+
+
+    let currentStep = 1;
+    let selectedTopic = null;
+    let selectedSubTopics = [];
+
+    function init() {
+        const list = document.getElementById('topic-list');
+        list.innerHTML = '';
+        appData.topics.forEach(t => {
+            const card = document.createElement('div');
+            card.className = 'topic-card';
+            card.innerHTML = `
+                <div class="topic-emoji">${t.emoji}</div>
+                <div class="topic-title">${t.title}</div>
+            `;
+            card.onclick = () => { 
+                // Clear previous selections
+                document.querySelectorAll('.topic-card').forEach(c => c.classList.remove('selected'));
+                // Select this one
+                selectedTopic = t; 
+                card.classList.add('selected');
+            };
+            list.appendChild(card);
+        });
+    }
+
+    function changeStep(n) {
+        if (n === 1 && !validateStep()) return;
+        document.getElementById(`step-${currentStep}`).classList.remove('active');
+        document.getElementById(`s${currentStep}-indicator`).classList.remove('active');
+        currentStep += n;
+        document.getElementById(`step-${currentStep}`).classList.add('active');
+        document.getElementById(`s${currentStep}-indicator`).classList.add('active');
+        
+        document.getElementById('backBtn').style.visibility = currentStep === 1 ? 'hidden' : 'visible';
+        document.getElementById('nextBtn').style.display = currentStep === 4 ? 'none' : 'block';
+        
+        if(currentStep === 2) renderSubtopics();
+        if(currentStep === 3) renderResources();
+        if(currentStep === 4) renderReport();
+    }
+
+    function validateStep() {
+        if (currentStep === 1 && !selectedTopic) { alert('Please select a topic.'); return false; }
+        if (currentStep === 2) {
+            const checked = document.querySelectorAll('#subtopic-list input:checked');
+            if(checked.length === 0) { alert('Select at least one sub-topic.'); return false; }
+            selectedSubTopics = Array.from(checked).map(c => ({ id: c.value, title: c.dataset.name }));
+        }
+        return true;
+    }
+
+    function renderSubtopics() {
+        document.getElementById('selected-topic-display').innerText = `You selected: ${selectedTopic.title}. Here are a few associated sub-topics:`;
+        const container = document.getElementById('subtopic-list');
+        container.innerHTML = '';
+        (appData.subTopics[selectedTopic.id] || []).forEach(s => {
+            const div = document.createElement('div');
+            div.className = 'option-item';
+            div.innerHTML = `<input type="checkbox" value="${s.id}" data-name="${s.title}"> ${s.title}`;
+            div.onclick = (e) => { if(e.target.tagName !== 'INPUT') { const cb = div.querySelector('input'); cb.checked = !cb.checked; } };
+            container.appendChild(div);
+        });
+    }
+
+    function renderResources() {
+        const tbody = document.getElementById('resource-table-body');
+        tbody.innerHTML = '';
+        selectedSubTopics.forEach(sub => {
+            const res = appData.resources[sub.id] || [];
+            res.forEach(r => {
+                const row = tbody.insertRow();
+                row.innerHTML = `
+                    <td class="clickable-cell center-col">${sub.title}</td>
+                    <td class="center-col"><a href="${r.link}" target="_blank" rel="noopener noreferrer">${r.title}</a></td>
+                    <td class="clickable-cell">${r.desc}</td>
+                    <td class="center-col"><input type="checkbox" class="res-check" 
+                        data-title="${r.title}" 
+                        data-link="${r.link}" 
+                        data-pub="${r.publisher || ''}" 
+                        data-date="${r.date || ''}" 
+                        data-subid="${sub.id}"></td>
+                `;
+                const cells = row.querySelectorAll('.clickable-cell');
+                cells.forEach(c => c.onclick = () => { 
+                    const cb = row.querySelector('.res-check');
+                    cb.checked = !cb.checked;
+                });
+            });
+        });
+    }
+
+    function renderReport() {
+        const container = document.getElementById('report-preview');
+        const allChecked = Array.from(document.querySelectorAll('.res-check:checked'));
+        
+        let paragraphsHTML = selectedSubTopics.map(sub => {
+            const relevantRes = allChecked.filter(r => r.dataset.subid === sub.id);
+            let resourceList = relevantRes.map(r => `<li><a href="${r.dataset.link}" target="_blank" rel="noopener noreferrer">${r.dataset.title}</a></li>`).join('');
+            return `
+                <div class="body-para-box">
+                    <strong>Body Paragraph: ${sub.title}</strong>
+                    <p>Compare and contrast the similarities and differences of ${sub.title} on how it relates to ${selectedTopic.title}. Use these resources to help:</p>
+                    <ul class="res-link-list">${resourceList || '<li>No resources selected for this section.</li>'}</ul>
+                </div>
+            `;
+        }).join('');
+
+        const citationsHTML = allChecked.map(r => {
+            const title = r.dataset.title;
+            const pub = r.dataset.pub ? `<em>${r.dataset.pub}</em>, ` : '';
+            const date = r.dataset.date ? `${r.dataset.date}.` : '';
+            const link = r.dataset.link;
+            return `<li style="margin-bottom: 10px; padding-left: 2em; text-indent: -2em;">"${title}." ${pub}${date}</li>`;
+        }).join('');
+
+        container.innerHTML = `
+            <h3>Paper Outline: ${selectedTopic.title}</h3>
+            <h4>I. Introduction</h4>
+            <p>Introduce and describe the topic: ${selectedTopic.title}, explain why it is an issue that needs to be discussed, and then provide your thesis statement.</p>
+            <h4>II. Analysis</h4>
+            ${paragraphsHTML}
+            <h4>III. Conclusion</h4>
+            <p>Summarize your findings and state your final conclusion.</p>
+            <h4>IV. Referenced Resources</h4>
+            <ul style="list-style-type: none; padding: 0;">${citationsHTML || '<li>No resources cited.</li>'}</ul>
+        `;
+    }
+
+    init();
+</script>
+
+</body>
+</html>

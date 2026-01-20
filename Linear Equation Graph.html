@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Slope-Intercept: Point Tester (20x20)</title>
+    <style>
+        :root {
+            --x-color: #e65100;
+            --y-color: #1a237e;
+            --line-color: #2e7d32;
+        }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f5f5f5; display: flex; flex-direction: column; align-items: center; padding: 20px; }
+        .main-layout { display: flex; gap: 30px; flex-wrap: wrap; background: white; padding: 30px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
+        
+        canvas { border: 3px solid #333; background-color: #fff; border-radius: 12px; cursor: crosshair; }
+        
+        .panel { display: flex; flex-direction: column; gap: 20px; width: 320px; }
+        .section { padding: 15px; border: 2px solid #eee; border-radius: 15px; }
+        .section-title { font-weight: bold; margin-bottom: 10px; font-size: 1.1rem; color: #444; border-bottom: 2px solid #eee; }
+
+        .eq-display { font-size: 2rem; text-align: center; margin-bottom: 15px; font-weight: 800; }
+        .x-text { color: var(--x-color); }
+        .y-text { color: var(--y-color); }
+
+        .input-group { margin-bottom: 15px; }
+        label { display: block; font-weight: bold; margin-bottom: 5px; font-size: 1.2rem; }
+        input[type=range] { width: 100%; }
+        .num-input { width: 70px; font-size: 1.5rem; padding: 5px; border: 3px solid #ccc; border-radius: 8px; text-align: center; }
+
+        .feedback { font-size: 1.4rem; font-weight: bold; text-align: center; padding: 10px; border-radius: 8px; margin-top: 10px; visibility: hidden; }
+        .correct { background: #c8e6c9; color: #2e7d32; visibility: visible; }
+        .wrong { background: #ffcdd2; color: #c62828; visibility: visible; }
+        
+        button { 
+            background: #333; color: white; border: none; padding: 15px; 
+            border-radius: 10px; font-size: 1.2rem; cursor: pointer; width: 100%;
+            transition: transform 0.1s;
+        }
+        button:active { transform: scale(0.98); }
+    </style>
+</head>
+<body>
+
+    <h1 style="margin-bottom: 10px;">Find the Point on the Line</h1>
+
+    <div class="main-layout">
+        <canvas id="graph" width="600" height="600"></canvas>
+
+        <div class="panel">
+            <div class="section">
+                <div class="section-title">1. Set the Rule</div>
+                <div class="eq-display">
+                    <span class="y-text">y</span> = <span id="mDisp">1</span><span class="x-text">x</span> + <span id="bDisp">0</span>
+                </div>
+                <div class="input-group">
+                    <label>Slope (m):</label>
+                    <input type="range" id="slope" min="-5" max="5" step="0.5" value="1">
+                </div>
+                <div class="input-group">
+                    <label>Y-Intercept (b):</label>
+                    <input type="range" id="intercept" min="-20" max="20" step="1" value="0">
+                </div>
+            </div>
+
+            <div class="section" style="border-color: var(--line-color);">
+                <div class="section-title">2. Submit a Point</div>
+                <p>Type values (-20 to 20) for <span class="x-text">x</span> and <span class="y-text">y</span>!</p>
+                
+                <div style="display: flex; justify-content: space-around; align-items: center; margin-bottom: 15px;">
+                    <div>
+                        <label class="x-text">x value</label>
+                        <input type="number" id="xInput" class="num-input" value="5">
+                    </div>
+                    <div style="font-size: 1.5rem; padding-top: 25px;">,</div>
+                    <div>
+                        <label class="y-text">y value</label>
+                        <input type="number" id="yInput" class="num-input" value="5">
+                    </div>
+                </div>
+
+                <button onclick="checkPoint()">Check My Point!</button>
+                <div id="feedback" class="feedback">Checking...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('graph');
+        const ctx = canvas.getContext('2d');
+        
+        // Revised scale: 600px / 40 units (-20 to 20) = 15 pixels per unit
+        const scale = 15; 
+        const origin = { x: canvas.width/2, y: canvas.height/2 };
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw Grid lines every unit
+            ctx.strokeStyle = '#eee';
+            ctx.lineWidth = 1;
+            for(let i = 0; i <= canvas.width; i += scale) {
+                ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, canvas.height); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(canvas.width, i); ctx.stroke();
+            }
+
+            // Draw Major Grid lines every 5 units for easier reading
+            ctx.strokeStyle = '#ccc';
+            for(let i = 0; i <= canvas.width; i += scale * 5) {
+                ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, canvas.height); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(canvas.width, i); ctx.stroke();
+            }
+
+            // Draw Axes
+            ctx.strokeStyle = '#333';
+            ctx.lineWidth = 2;
+            ctx.beginPath(); ctx.moveTo(origin.x, 0); ctx.lineTo(origin.x, canvas.height); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(0, origin.y); ctx.lineTo(canvas.width, origin.y); ctx.stroke();
+
+            // Label the axes (optional but helpful for 20x20)
+            ctx.fillStyle = "#333";
+            ctx.font = "12px Arial";
+            ctx.fillText("20", origin.x + 5, 15);
+            ctx.fillText("-20", origin.x + 5, canvas.height - 5);
+            ctx.fillText("20", canvas.width - 20, origin.y - 5);
+            ctx.fillText("-20", 5, origin.y - 5);
+
+            // Get Values
+            const m = parseFloat(document.getElementById('slope').value);
+            const b = parseFloat(document.getElementById('intercept').value);
+            document.getElementById('mDisp').innerText = m;
+            document.getElementById('bDisp').innerText = b;
+
+            // Draw Line (Extended range to -20 and 20)
+            ctx.strokeStyle = '#2e7d32';
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            for(let x = -20; x <= 20; x += 0.1) {
+                const cx = origin.x + (x * scale);
+                const cy = origin.y - ((m * x + b) * scale);
+                
+                if(x === -20) ctx.moveTo(cx, cy);
+                else ctx.lineTo(cx, cy);
+            }
+            ctx.stroke();
+        }
+
+        function checkPoint() {
+            const m = parseFloat(document.getElementById('slope').value);
+            const b = parseFloat(document.getElementById('intercept').value);
+            const xVal = parseFloat(document.getElementById('xInput').value);
+            const yVal = parseFloat(document.getElementById('yInput').value);
+            const feedback = document.getElementById('feedback');
+
+            const expectedY = (m * xVal) + b;
+            draw();
+
+            // Draw student's point
+            ctx.fillStyle = (yVal === expectedY) ? '#2e7d32' : '#c62828';
+            ctx.beginPath();
+            ctx.arc(origin.x + (xVal * scale), origin.y - (yVal * scale), 6, 0, Math.PI*2);
+            ctx.fill();
+
+            if (yVal === expectedY) {
+                feedback.innerText = "⭐ Yes! It's on the line!";
+                feedback.className = "feedback correct";
+            } else {
+                feedback.innerText = "❌ Not quite. Try again!";
+                feedback.className = "feedback wrong";
+            }
+        }
+
+        document.getElementById('slope').addEventListener('input', () => { draw(); document.getElementById('feedback').className = 'feedback'; });
+        document.getElementById('intercept').addEventListener('input', () => { draw(); document.getElementById('feedback').className = 'feedback'; });
+
+        draw();
+    </script>
+</body>
+</html>
