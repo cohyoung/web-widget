@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Qualitative Theme Analysis Web Widget</title>
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --accent: #3498db;
+            --bg: #f8f9fa;
+            --border: #dee2e6;
+            --danger: #e74c3c;
+            --success: #2ecc71;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: var(--bg);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* --- Header --- */
+        header {
+            background: var(--primary);
+            color: white;
+            padding: 0 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            height: 60px;
+            flex-shrink: 0;
+        }
+
+        .header-btn {
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            padding: 8px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            margin-left: 10px;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .header-btn:hover { background: rgba(255,255,255,0.3); }
+        .header-btn.danger { background: #c0392b; }
+
+        /* --- Layout --- */
+        .container {
+            display: flex;
+            flex: 1;
+            overflow: hidden; 
+        }
+
+        /* --- Sidebar --- */
+        .sidebar {
+            width: 320px;
+            background: white;
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+        }
+
+        .sidebar-header {
+            padding: 15px;
+            background: #f1f3f5;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .code-input-group {
+            display: flex;
+            gap: 5px;
+            margin-top: 10px;
+        }
+
+        #newCodeName {
+            flex: 1;
+            padding: 8px;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+        }
+
+        .btn-add {
+            background: var(--accent);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            width: 35px;
+            font-size: 1.2rem;
+            cursor: pointer;
+        }
+
+        .code-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px;
+            list-style: none;
+            margin: 0;
+        }
+
+        /* Code Item Styling */
+        .code-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 10px;
+            margin-bottom: 6px;
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+            user-select: none;
+        }
+
+        .code-item:hover {
+            border-color: var(--accent);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        
+        .code-item.editing {
+            background: #fff3cd;
+            border-color: #ffeeba;
+            cursor: default;
+        }
+
+        .code-left {
+            display: flex;
+            align-items: center;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .color-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 10px;
+            flex-shrink: 0;
+            border: 1px solid rgba(0,0,0,0.1);
+        }
+
+        .code-name-text {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            font-size: 0.95rem;
+        }
+
+        .code-actions {
+            display: flex;
+            gap: 4px;
+            opacity: 0.3;
+            transition: opacity 0.2s;
+        }
+        
+        .code-item:hover .code-actions { opacity: 1; }
+
+        .icon-btn {
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        
+        .icon-btn:hover { background: rgba(0,0,0,0.1); }
+        .icon-btn.delete:hover { color: var(--danger); background: #fce8e6; }
+        .icon-btn.edit:hover { color: var(--accent); }
+
+        .edit-form { display: flex; width: 100%; gap: 5px; }
+        .edit-input { flex: 1; padding: 4px; border: 1px solid #ccc; border-radius: 3px; }
+
+        /* --- Main Content --- */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: white;
+        }
+
+        .tabs {
+            display: flex;
+            background: #f1f3f5;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .tab {
+            padding: 12px 25px;
+            cursor: pointer;
+            border-right: 1px solid var(--border);
+            color: #666;
+            font-weight: 500;
+        }
+
+        .tab.active {
+            background: white;
+            color: var(--primary);
+            border-bottom: 2px solid var(--accent);
+            margin-bottom: -1px;
+        }
+
+        /* --- EDITOR LAYOUT UPDATES (Left Aligned) --- */
+        .view-panel {
+            display: none;
+            flex: 1;
+            padding: 30px; /* Reduced padding */
+            overflow-y: auto;
+            width: 100%;
+            /* Removed margin: 0 auto; Removed max-width centering */
+        }
+        .view-panel.active { display: block; }
+
+        #editor {
+            outline: none;
+            line-height: 1.8;
+            font-size: 1.1rem;
+            color: #333;
+            white-space: pre-wrap;
+            min-height: 300px;
+            /* Limit width slightly so text isn't too wide to read, but keep left */
+            max-width: 900px; 
+        }
+
+        .coded-segment {
+            border-bottom: 2px solid;
+            padding: 2px 0;
+            cursor: pointer; 
+            transition: background 0.2s;
+        }
+        .coded-segment:hover { filter: brightness(95%); }
+
+        /* --- Print / PDF Styles (UPDATED FOR COLOR) --- */
+        @media print {
+            body { 
+                height: auto; 
+                display: block; 
+                overflow: visible; 
+                /* FORCE COLOR PRINTING */
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+            
+            header, .sidebar, .tabs, .code-actions, .code-input-group { display: none !important; }
+            .container { display: block; }
+            .main-content { display: block; }
+            
+            .view-panel { 
+                display: block !important; 
+                overflow: visible; 
+                padding: 0; 
+                margin-bottom: 40px; 
+                max-width: 100%;
+            }
+            
+            #editPanel::before { content: "Document Analysis"; display: block; font-size: 1.5rem; font-weight: bold; margin-bottom: 15px; border-bottom: 2px solid #333; }
+            #reportPanel::before { content: "Code Frequency & Retrieval Report"; display: block; font-size: 1.5rem; font-weight: bold; margin-bottom: 15px; border-bottom: 2px solid #333; page-break-before: always; }
+
+            /* Ensure background colors remain visible in PDF */
+            .coded-segment { 
+                border: 0 !important; /* Remove border, rely on background color */
+                padding: 2px 2px !important;
+            }
+            
+            /* Keep the footnote for clarity */
+            .coded-segment::after {
+                content: " [" attr(data-code-name) "]";
+                font-size: 0.7em;
+                color: #444;
+                font-weight: normal;
+                vertical-align: super;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <div style="font-weight:bold; font-size:1.3rem;">Qualitative Theme Analysis Web Widget</div>
+    <div>
+        <button class="header-btn" onclick="saveAsPDF()">📄 Save as PDF</button>
+        <button class="header-btn danger" onclick="resetProject()">Reset Project</button>
+    </div>
+</header>
+
+<div class="container">
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <h4>Code System</h4>
+            <div class="code-input-group">
+                <input type="text" id="newCodeName" placeholder="New Theme Name...">
+                <button class="btn-add" onclick="addCode()">+</button>
+            </div>
+        </div>
+        <ul class="code-list" id="codeContainer"></ul>
+    </aside>
+
+    <main class="main-content">
+        <div class="tabs">
+            <div class="tab active" onclick="switchTab('edit')">Document View</div>
+            <div class="tab" onclick="switchTab('report')">Analysis Report</div>
+        </div>
+
+        <div id="editPanel" class="view-panel active">
+            <div id="editor" contenteditable="true" onmouseup="saveSelection()" onkeyup="saveSelection()">
+Paste your interview text here...
+
+Participant: "I found the interface confusing at first." 
+(Select 'confusing' and code it as 'UX Issue')
+
+Participant: "But the colors were very vibrant."
+(Select 'vibrant' and code it as 'Positive Feedback')
+            </div>
+        </div>
+
+        <div id="reportPanel" class="view-panel">
+            <div id="reportContent"></div>
+        </div>
+    </main>
+</div>
+
+<script>
+    // --- State ---
+    let codes = [];
+    let savedRange = null; 
+    let editingCodeId = null; 
+
+    // Palette (Vibrant pastel colors for PDF visibility)
+    const colors = ['#ffcdd2', '#bbdefb', '#c8e6c9', '#fff9c4', '#e1bee7', '#b2ebf2', '#ffecb3', '#d7ccc8'];
+    const borderColors = ['#e57373', '#64b5f6', '#81c784', '#fff176', '#ba68c8', '#4dd0e1', '#ffd54f', '#a1887f'];
+
+    window.onload = loadData;
+
+    // --- Core Funcs ---
+    function saveSelection() {
+        const sel = window.getSelection();
+        if (sel.rangeCount > 0) savedRange = sel.getRangeAt(0);
+    }
+
+    // --- Code System Management ---
+    function addCode() {
+        const input = document.getElementById('newCodeName');
+        const name = input.value.trim();
+        if (!name) return;
+
+        const idx = codes.length % colors.length;
+        codes.push({
+            id: 'code-' + Date.now(),
+            name: name,
+            bg: colors[idx],
+            border: borderColors[idx]
+        });
+        
+        input.value = '';
+        renderCodes();
+        saveLocalStorage();
+    }
+
+    function deleteCode(id) {
+        if(!confirm("Delete this code?")) return;
+        codes = codes.filter(c => c.id !== id);
+        renderCodes();
+        saveLocalStorage();
+    }
+
+    function startEdit(id) {
+        editingCodeId = id;
+        renderCodes();
+    }
+
+    function saveEdit(id, newName) {
+        const code = codes.find(c => c.id === id);
+        if(code && newName.trim()) {
+            code.name = newName.trim();
+            document.querySelectorAll(`.coded-segment[data-code-id="${id}"]`)
+                    .forEach(el => el.setAttribute('data-code-name', code.name));
+        }
+        editingCodeId = null;
+        renderCodes();
+        saveLocalStorage();
+    }
+
+    function renderCodes() {
+        const container = document.getElementById('codeContainer');
+        container.innerHTML = '';
+
+        codes.forEach(code => {
+            const li = document.createElement('li');
+            li.className = 'code-item';
+            
+            if(editingCodeId === code.id) {
+                li.classList.add('editing');
+                li.innerHTML = `
+                    <form class="edit-form" onsubmit="event.preventDefault(); saveEdit('${code.id}', this.querySelector('input').value)">
+                        <input class="edit-input" type="text" value="${code.name}" autofocus onblur="saveEdit('${code.id}', this.value)">
+                        <button type="submit" class="icon-btn success">✓</button>
+                    </form>
+                `;
+            } else {
+                li.onmousedown = (e) => { if(e.target.tagName !== 'BUTTON') e.preventDefault(); }; 
+                li.onclick = (e) => { 
+                    if(e.target.tagName === 'BUTTON' || e.target.closest('.icon-btn')) return;
+                    applyCode(code); 
+                };
+
+                li.innerHTML = `
+                    <div class="code-left">
+                        <span class="color-dot" style="background:${code.bg}; border-color:${code.border}"></span>
+                        <span class="code-name-text">${code.name}</span>
+                    </div>
+                    <div class="code-actions">
+                        <button class="icon-btn edit" title="Edit Name" onclick="startEdit('${code.id}')">✏️</button>
+                        <button class="icon-btn delete" title="Delete Code" onclick="deleteCode('${code.id}')">🗑️</button>
+                    </div>
+                `;
+            }
+            container.appendChild(li);
+        });
+    }
+
+    // --- Coding Logic ---
+    function applyCode(code) {
+        const editor = document.getElementById('editor');
+        const sel = window.getSelection();
+        
+        if (savedRange) {
+            sel.removeAllRanges();
+            sel.addRange(savedRange);
+        }
+
+        if (!sel.rangeCount || sel.isCollapsed || !editor.contains(sel.anchorNode)) {
+            alert("Please select text inside the document first.");
+            return;
+        }
+
+        const range = sel.getRangeAt(0);
+        const span = document.createElement('span');
+        span.className = 'coded-segment';
+        span.style.backgroundColor = code.bg;
+        span.style.borderColor = code.border;
+        span.setAttribute('data-code-id', code.id);
+        span.setAttribute('data-code-name', code.name);
+        
+        span.onclick = function(e) { 
+            e.stopPropagation();
+            if(confirm(`Remove code "${code.name}"?`)) {
+                const p = span.parentNode;
+                while (span.firstChild) p.insertBefore(span.firstChild, span);
+                p.removeChild(span);
+                saveLocalStorage();
+            }
+        };
+
+        try {
+            range.surroundContents(span);
+            sel.removeAllRanges(); 
+            savedRange = null; 
+            saveLocalStorage();
+        } catch (e) {
+            alert("Cannot overlap codes perfectly. Try selecting plain text.");
+        }
+    }
+
+    // --- PDF / Reporting ---
+    function switchTab(t) {
+        document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+        document.querySelectorAll('.view-panel').forEach(el => el.classList.remove('active'));
+        
+        if(t === 'edit') {
+            document.querySelectorAll('.tab')[0].classList.add('active');
+            document.getElementById('editPanel').classList.add('active');
+        } else {
+            document.querySelectorAll('.tab')[1].classList.add('active');
+            document.getElementById('reportPanel').classList.add('active');
+            generateReport();
+        }
+    }
+
+    function generateReport() {
+        const container = document.getElementById('reportContent');
+        container.innerHTML = '<h2>Analysis Summary</h2>';
+        
+        const segments = document.getElementById('editor').querySelectorAll('.coded-segment');
+        if(segments.length === 0) {
+            container.innerHTML += '<p style="color:#777">No data coded yet.</p>';
+            return;
+        }
+
+        const grouped = {};
+        segments.forEach(seg => {
+            const name = seg.getAttribute('data-code-name');
+            const bg = seg.style.backgroundColor;
+            if(!grouped[name]) grouped[name] = { bg: bg, quotes: [] };
+            grouped[name].quotes.push(seg.innerText);
+        });
+
+        for (const [name, data] of Object.entries(grouped)) {
+            const block = document.createElement('div');
+            block.style.marginBottom = "20px";
+            block.style.border = "1px solid #ddd";
+            block.style.borderRadius = "5px";
+            block.style.breakInside = "avoid"; // Prevent breaking inside a theme in PDF
+            
+            let html = `<div style="background:${data.bg}; padding:10px; font-weight:bold; border-bottom:1px solid #ddd;">${name} (${data.quotes.length})</div>`;
+            data.quotes.forEach(q => {
+                html += `<div style="padding:10px; border-bottom:1px solid #eee; font-style:italic;">"${q}"</div>`;
+            });
+            block.innerHTML = html;
+            container.appendChild(block);
+        }
+    }
+
+    function saveAsPDF() {
+        generateReport();
+        window.print();
+    }
+
+    // --- Storage ---
+    function saveLocalStorage() {
+        const data = { codes, content: document.getElementById('editor').innerHTML };
+        localStorage.setItem('miniQDA_v4', JSON.stringify(data));
+    }
+
+    function loadData() {
+        const data = JSON.parse(localStorage.getItem('qualwebwidget'));
+        if (data) {
+            codes = data.codes || [];
+            if(data.content) document.getElementById('editor').innerHTML = data.content;
+            
+            document.querySelectorAll('.coded-segment').forEach(span => {
+                span.onclick = function(e) {
+                    e.stopPropagation();
+                    if(confirm("Remove code?")) {
+                        const p = span.parentNode;
+                        while(span.firstChild) p.insertBefore(span.firstChild, span);
+                        p.removeChild(span);
+                        saveLocalStorage();
+                    }
+                }
+            });
+        }
+        renderCodes();
+    }
+
+    function resetProject() {
+        if(confirm("Delete all data? This cannot be undone.")) {
+            localStorage.removeItem('qualwebwidget');
+            location.reload();
+        }
+    }
+</script>
+</body>
+</html>
