@@ -1,0 +1,2076 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Database Web Widget</title>
+
+    <!-- React (no build step) -->
+    <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+    <!-- Babel for JSX in-browser -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <style>
+      :root {
+        --bg: #f4f4f5;
+        --card: #ffffff;
+        --text: #18181b;
+        --muted: #71717a;
+        --border: #e4e4e7;
+        --soft: #fafafa;
+        --brand: #18181b;
+        --brand2: #27272a;
+        --danger: #dc2626;
+        --shadow: 0 10px 30px rgba(0,0,0,0.08);
+        --r: 16px;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+        color: var(--text);
+        background: var(--bg);
+      }
+      .wrap { max-width: 1200px; margin: 0 auto; padding: 16px; }
+      .row { display: flex; gap: 16px; }
+      .col { display: flex; flex-direction: column; gap: 16px; }
+      .card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: var(--r);
+        box-shadow: none;
+      }
+      .card.pad { padding: 12px; }
+      .header {
+        display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;
+        flex-wrap: wrap;
+      }
+      h1 { margin: 0; font-size: 20px; font-weight: 700; }
+      .sub { color: var(--muted); font-size: 13px; margin-top: 4px; }
+
+      .btn, .btn-ghost, .tab {
+        border-radius: 12px;
+        padding: 10px 12px;
+        border: 1px solid transparent;
+        cursor: pointer;
+        font-weight: 600;
+        font-size: 13px;
+        line-height: 1;
+        user-select: none;
+      }
+      .btn { background: var(--brand); color: white; border-color: var(--brand); }
+      .btn:hover { background: var(--brand2); border-color: var(--brand2); }
+      .btn:disabled, .btn-ghost:disabled, .tab:disabled { opacity: 0.5; cursor: not-allowed; }
+      .btn-ghost { background: white; color: var(--text); border-color: var(--border); }
+      .btn-ghost:hover { background: var(--soft); }
+
+      .tabs { display: flex; gap: 8px; flex-wrap: wrap; }
+      .tab { background: white; border-color: var(--border); color: #3f3f46; }
+      .tab.active { background: var(--brand); border-color: var(--brand); color: white; }
+
+      .input, select, textarea {
+        width: 100%;
+        border: 1px solid var(--border);
+        background: white;
+        border-radius: 12px;
+        padding: 10px 12px;
+        font-size: 14px;
+        outline: none;
+      }
+      .input:focus, select:focus, textarea:focus { box-shadow: 0 0 0 3px rgba(24,24,27,0.12); border-color: #d4d4d8; }
+      textarea { min-height: 140px; resize: vertical; }
+      .muted { color: var(--muted); }
+
+      .section-title { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
+      .section-title .t { font-weight: 700; font-size: 13px; color: #27272a; }
+      .divider { height: 1px; background: var(--border); margin: 12px 0; }
+
+      .badge {
+        display: inline-flex; align-items: center;
+        padding: 2px 8px; border-radius: 999px;
+        border: 1px solid var(--border);
+        background: #fafafa;
+        font-size: 12px;
+        color: #3f3f46;
+        gap: 6px;
+      }
+
+      .list { display: flex; flex-direction: column; gap: 6px; }
+
+      .tableItem {
+        display: flex; gap: 10px; align-items: center;
+        padding: 10px;
+        border-radius: 14px;
+        border: 1px solid transparent;
+        background: transparent;
+      }
+      .tableItem:hover { background: var(--soft); border-color: var(--border); }
+      .tableItem.active { background: #fafafa; border-color: var(--brand); }
+      .tableItem .meta { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+      .icon {
+        width: 26px; height: 26px; border-radius: 10px;
+        border: 1px solid var(--border);
+        background: #fafafa;
+        display: inline-flex; align-items: center; justify-content: center;
+        font-size: 12px;
+      }
+
+      .iconBtn {
+        border: 1px solid var(--border);
+        background: white;
+        border-radius: 12px;
+        padding: 8px 10px;
+        cursor: pointer;
+        font-size: 13px;
+        line-height: 1;
+        color: #3f3f46;
+      }
+      .iconBtn:hover { background: var(--soft); }
+
+      .trash {
+        border: none; background: transparent; cursor: pointer;
+        color: var(--muted); font-size: 14px;
+      }
+      .trash:hover { color: var(--text); }
+
+      /* Spreadsheet grid (Data: List) */
+      .gridWrap { overflow: auto; border-radius: var(--r); border: 1px solid var(--border); background: white; }
+      table { border-collapse: collapse; width: 100%; font-size: 14px; }
+      thead th {
+        position: sticky; top: 0;
+        background: #fafafa;
+        border-bottom: 1px solid var(--border);
+        text-align: left;
+        padding: 10px 12px;
+        font-weight: 800;
+        color: #27272a;
+        white-space: nowrap;
+        z-index: 2;
+      }
+      tbody td {
+        border-bottom: 1px solid #f1f1f3;
+        padding: 10px 12px;
+        vertical-align: top;
+        white-space: nowrap;
+      }
+      tr:hover td { background: #fafafa; }
+      tr.active td { background: #fafafa; }
+
+      /* Modal */
+      .modalOverlay {
+        position: fixed; inset: 0; z-index: 9999;
+        background: rgba(0,0,0,0.40);
+        display: flex; align-items: center; justify-content: center;
+        padding: 18px;
+      }
+      .modal {
+        width: min(760px, 96vw);
+        background: white;
+        border: 1px solid var(--border);
+        border-radius: 18px;
+        box-shadow: var(--shadow);
+        overflow: hidden;
+      }
+      .modalHead {
+        display: flex; align-items: center; justify-content: space-between;
+        padding: 12px 14px;
+        border-bottom: 1px solid #f1f1f3;
+        font-weight: 800;
+      }
+      .modalBody { padding: 14px; max-height: 70vh; overflow: auto; }
+      .modalFoot { padding: 14px; border-top: 1px solid #f1f1f3; display: flex; justify-content: flex-end; gap: 10px; }
+
+      /* Layout canvas */
+      .canvasCard { overflow: hidden; }
+      .canvasHead {
+        padding: 10px 12px;
+        border-bottom: 1px solid #f1f1f3;
+        display: flex; justify-content: space-between; gap: 10px; align-items: center;
+        flex-wrap: wrap;
+      }
+      .canvasArea {
+        position: relative;
+        background: white;
+      }
+      .gridBg {
+        position: absolute; inset: 0;
+        opacity: 0.35;
+        pointer-events: none;
+        background-image:
+          linear-gradient(to right, rgba(0,0,0,0.08) 1px, transparent 1px),
+          linear-gradient(to bottom, rgba(0,0,0,0.08) 1px, transparent 1px);
+      }
+      .layoutItem {
+        position: absolute;
+        border-radius: 14px;
+        border: 1px solid var(--border);
+        background: white;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+      }
+      .layoutItem.selected {
+        border-color: var(--brand);
+        box-shadow: 0 0 0 3px rgba(24,24,27,0.10), 0 4px 12px rgba(0,0,0,0.06);
+      }
+      .layoutItemHead {
+        display: flex; align-items: center; gap: 8px;
+        padding: 8px 10px 0 10px;
+        font-size: 12px;
+        color: #52525b;
+      }
+      .layoutItemHead .name { font-weight: 800; color: #27272a; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .layoutItemBody { padding: 8px 10px 10px; }
+      .fakeControl { height: 32px; border-radius: 10px; border: 1px solid var(--border); background: #fafafa; }
+
+      /* Resize handle */
+      .resizeHandle {
+        position: absolute;
+        width: 14px;
+        height: 14px;
+        right: 6px;
+        bottom: 6px;
+        border-radius: 6px;
+        background: #fff;
+        border: 1px solid var(--border);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.10);
+        cursor: nwse-resize;
+      }
+      .resizeHandle::after{
+        content: "";
+        position: absolute;
+        inset: 3px;
+        border-right: 2px solid #a1a1aa;
+        border-bottom: 2px solid #a1a1aa;
+        border-radius: 2px;
+        opacity: 0.9;
+      }
+
+      /* Data form (layout-driven) */
+      .formStage {
+        position: relative;
+        border: 1px solid var(--border);
+        background: #fafafa;
+        border-radius: 18px;
+        overflow: hidden;
+      }
+      .formItem {
+        position: absolute;
+        border-radius: 14px;
+        border: 1px solid var(--border);
+        background: white;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+      }
+      .formItem .label {
+        padding: 10px 12px 6px;
+        font-size: 12px;
+        font-weight: 900;
+        color: #3f3f46;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .formItem .control { padding: 0 12px 12px; }
+      .control .input, .control select {
+        padding: 8px 10px;
+        border-radius: 10px;
+      }
+
+      .hint {
+        font-size: 12px;
+        color: #71717a;
+        line-height: 1.4;
+        margin-top: 6px;
+      }
+
+      @media (max-width: 980px) {
+        .row { flex-direction: column; }
+      }
+    </style>
+  </head>
+
+  <body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+      const { useEffect, useMemo, useRef, useState } = React;
+
+      const LS_KEY = "fm_like_widget_single_html_v1"; // keep key to preserve existing data
+
+      const FIELD_TYPES = [
+        { id: "text", label: "Text" },
+        { id: "number", label: "Number" },
+        { id: "date", label: "Date" },
+        { id: "boolean", label: "Boolean" },
+        { id: "select", label: "Select" },
+        { id: "calculation", label: "Calculation" },
+      ];
+
+      function uid(prefix = "id") {
+        return `${prefix}_${Math.random().toString(16).slice(2)}_${Date.now().toString(16)}`;
+      }
+      function deepClone(x) { return JSON.parse(JSON.stringify(x)); }
+      function clamp(n, min, max) { return Math.max(min, Math.min(max, n)); }
+      function snap(n, grid) { if (!grid) return n; return Math.round(n / grid) * grid; }
+
+      function defaultDB() {
+        const tableId = uid("tbl");
+        const fnameId = uid("fld");
+        const lnameId = uid("fld");
+        const fullId = uid("fld");
+        const layoutId = uid("lyt");
+        return {
+          version: 1,
+          tables: {
+            [tableId]: {
+              id: tableId,
+              name: "Contacts",
+              fields: {
+                [fnameId]: { id: fnameId, name: "fname", type: "text", required: false, options: [] },
+                [lnameId]: { id: lnameId, name: "lname", type: "text", required: false, options: [] },
+                [fullId]: {
+                  id: fullId,
+                  name: "full_name",
+                  type: "calculation",
+                  required: false,
+                  options: [],
+                  formula: 'fname&" "&lname',
+                },
+              },
+              fieldOrder: [fnameId, lnameId, fullId],
+              records: {},
+              recordOrder: [],
+              layouts: {
+                [layoutId]: {
+                  id: layoutId,
+                  name: "Default Layout",
+                  canvas: { width: 720, height: 460, grid: 10 },
+                  items: [
+                    { id: uid("itm"), fieldId: fnameId, x: 40, y: 40, w: 320, h: 70, label: "fname" },
+                    { id: uid("itm"), fieldId: lnameId, x: 40, y: 130, w: 320, h: 70, label: "lname" },
+                    { id: uid("itm"), fieldId: fullId, x: 40, y: 220, w: 320, h: 70, label: "full_name" },
+                  ],
+                },
+              },
+              layoutOrder: [layoutId],
+            },
+          },
+          tableOrder: [tableId],
+        };
+      }
+
+      function loadDB() {
+        try {
+          const raw = localStorage.getItem(LS_KEY);
+          if (!raw) return defaultDB();
+          const parsed = JSON.parse(raw);
+          if (!parsed?.tables || !parsed?.tableOrder) return defaultDB();
+          return parsed;
+        } catch {
+          return defaultDB();
+        }
+      }
+
+      function saveDB(db) {
+        try { localStorage.setItem(LS_KEY, JSON.stringify(db)); } catch {}
+      }
+
+      function FieldIcon({ type }) {
+        const map = { text: "T", number: "#", date: "📅", boolean: "✓", select: "▾", calculation: "fx" };
+        return <span className="icon" title={type}>{map[type] ?? "?"}</span>;
+      }
+
+      function normalizeValue(type, value) {
+        if (value == null) return value;
+        if (type === "calculation") return ""; // not stored
+        if (type === "number") {
+          const n = typeof value === "number" ? value : Number(value);
+          return Number.isFinite(n) ? n : "";
+        }
+        if (type === "boolean") return !!value;
+        if (type === "date") {
+          if (value instanceof Date) return value.toISOString().slice(0,10);
+          if (typeof value === "string") return value.slice(0,10);
+          return "";
+        }
+        return value;
+      }
+
+      function formatValue(type, value) {
+        if (value == null) return "";
+        if (type === "boolean") return value ? "True" : "False";
+        return String(value);
+      }
+
+      function coerceRecordForFields(record, fieldsById) {
+        const out = { ...record };
+        for (const fid of Object.keys(fieldsById)) {
+          const f = fieldsById[fid];
+          if (!(fid in out)) out[fid] = f.type === "boolean" ? false : "";
+          out[fid] = normalizeValue(f.type, out[fid]);
+        }
+        // ensure calc fields not stored
+        for (const fid of Object.keys(fieldsById)) {
+          const f = fieldsById[fid];
+          if (f.type === "calculation") out[fid] = "";
+        }
+        return out;
+      }
+
+      function recordMatchesQuery(record, fields, query) {
+        if (!query.trim()) return true;
+        const q = query.trim().toLowerCase();
+        return fields.some((f) => {
+          const v = (record?.[f.id] ?? "");
+          return formatValue(f.type, v).toLowerCase().includes(q);
+        });
+      }
+
+      function exportJSON(db) {
+        const blob = new Blob([JSON.stringify(db, null, 2)], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "database_web_widget_export.json";
+        a.click();
+        URL.revokeObjectURL(url);
+      }
+
+      function readFileAsText(file) {
+        return new Promise((resolve, reject) => {
+          const r = new FileReader();
+          r.onload = () => resolve(String(r.result ?? ""));
+          r.onerror = reject;
+          r.readAsText(file);
+        });
+      }
+
+      function slugifyName(name) {
+        return String(name ?? "")
+          .trim()
+          .toLowerCase()
+          .replace(/\s+/g, "_")
+          .replace(/[^a-z0-9_]/g, "");
+      }
+
+      // -----------------------------
+      // Calculation: Excel-ish parser
+      // Supports:
+      //  - identifiers (field names / slugs)
+      //  - string literals "..."
+      //  - numbers
+      //  - operators: & + - * / ( )
+      // Precedence: * /, then + -, then &
+      // -----------------------------
+      function tokenizeFormula(s) {
+        const src = String(s ?? "");
+        const tokens = [];
+        let i = 0;
+        const isAlpha = (c) => /[A-Za-z_]/.test(c);
+        const isAlnum = (c) => /[A-Za-z0-9_]/.test(c);
+        const isDigit = (c) => /[0-9]/.test(c);
+
+        while (i < src.length) {
+          const c = src[i];
+          if (/\s/.test(c)) { i++; continue; }
+
+          if (c === '"') {
+            i++;
+            let out = "";
+            while (i < src.length) {
+              const ch = src[i];
+              if (ch === '"') { i++; break; }
+              if (ch === "\\" && i + 1 < src.length) {
+                const nxt = src[i + 1];
+                if (nxt === '"' || nxt === "\\") { out += nxt; i += 2; continue; }
+              }
+              out += ch;
+              i++;
+            }
+            tokens.push({ type: "STRING", value: out });
+            continue;
+          }
+
+          if (isDigit(c) || (c === "." && isDigit(src[i + 1] || ""))) {
+            let j = i;
+            while (j < src.length && (isDigit(src[j]) || src[j] === ".")) j++;
+            const num = Number(src.slice(i, j));
+            tokens.push({ type: "NUMBER", value: num });
+            i = j;
+            continue;
+          }
+
+          if (isAlpha(c)) {
+            let j = i;
+            while (j < src.length && isAlnum(src[j])) j++;
+            const id = src.slice(i, j);
+            tokens.push({ type: "IDENT", value: id });
+            i = j;
+            continue;
+          }
+
+          if ("&+-*/()".includes(c)) {
+            tokens.push({ type: c, value: c });
+            i++;
+            continue;
+          }
+
+          // unknown char: skip (or could error)
+          i++;
+        }
+        return tokens;
+      }
+
+      function parseFormula(tokens) {
+        let pos = 0;
+        const peek = () => tokens[pos] ?? null;
+        const consume = (type) => {
+          const t = tokens[pos];
+          if (!t || t.type !== type) return null;
+          pos++;
+          return t;
+        };
+
+        function parsePrimary() {
+          const t = peek();
+          if (!t) return { kind: "str", value: "" };
+          if (consume("NUMBER")) return { kind: "num", value: t.value };
+          if (consume("STRING")) return { kind: "str", value: t.value };
+          if (consume("IDENT")) return { kind: "ident", name: t.value };
+          if (consume("(")) {
+            const e = parseConcat();
+            consume(")");
+            return e;
+          }
+          // fallback
+          pos++;
+          return { kind: "str", value: "" };
+        }
+
+        function parseUnary() {
+          const t = peek();
+          if (t && (t.type === "+" || t.type === "-")) {
+            pos++;
+            const expr = parseUnary();
+            return { kind: "unary", op: t.type, expr };
+          }
+          return parsePrimary();
+        }
+
+        function parseMulDiv() {
+          let left = parseUnary();
+          while (true) {
+            const t = peek();
+            if (!t || (t.type !== "*" && t.type !== "/")) break;
+            pos++;
+            const right = parseUnary();
+            left = { kind: "bin", op: t.type, left, right };
+          }
+          return left;
+        }
+
+        function parseAddSub() {
+          let left = parseMulDiv();
+          while (true) {
+            const t = peek();
+            if (!t || (t.type !== "+" && t.type !== "-")) break;
+            pos++;
+            const right = parseMulDiv();
+            left = { kind: "bin", op: t.type, left, right };
+          }
+          return left;
+        }
+
+        function parseConcat() {
+          let left = parseAddSub();
+          while (true) {
+            const t = peek();
+            if (!t || t.type !== "&") break;
+            pos++;
+            const right = parseAddSub();
+            left = { kind: "bin", op: "&", left, right };
+          }
+          return left;
+        }
+
+        const ast = parseConcat();
+        return ast;
+      }
+
+      function buildFieldNameMap(table) {
+        const map = new Map(); // key -> fieldId
+        for (const fid of table.fieldOrder ?? []) {
+          const f = table.fields[fid];
+          if (!f) continue;
+          const raw = String(f.name ?? "");
+          const lower = raw.trim().toLowerCase();
+          const slug = slugifyName(raw);
+          if (lower && !map.has(lower)) map.set(lower, fid);
+          if (slug && !map.has(slug)) map.set(slug, fid);
+        }
+        return map;
+      }
+
+      function evalFormulaAst(ast, ctx) {
+        // ctx: { table, record, nameMap, visited(Set), depth, maxDepth }
+        const { table, record, nameMap } = ctx;
+
+        function toNumber(x) {
+          const n = typeof x === "number" ? x : Number(x);
+          return Number.isFinite(n) ? n : NaN;
+        }
+
+        function resolveIdent(name) {
+          const keyA = String(name ?? "").trim().toLowerCase();
+          const keyB = slugifyName(name);
+          const fid = nameMap.get(keyA) ?? nameMap.get(keyB);
+          if (!fid) return "";
+
+          // prevent loops
+          if (ctx.visited.has(fid)) return "#CIRC";
+          const f = table.fields[fid];
+          if (!f) return "";
+
+          if (f.type === "calculation") {
+            // recursive calc
+            if (ctx.depth >= ctx.maxDepth) return "#DEPTH";
+            ctx.visited.add(fid);
+            const v = computeFieldValue(table, record, f, ctx.depth + 1, ctx.visited);
+            ctx.visited.delete(fid);
+            return v;
+          }
+          return record?.[fid] ?? "";
+        }
+
+        function evalNode(node) {
+          if (!node) return "";
+          if (node.kind === "num") return node.value;
+          if (node.kind === "str") return node.value;
+          if (node.kind === "ident") return resolveIdent(node.name);
+          if (node.kind === "unary") {
+            const v = evalNode(node.expr);
+            const n = toNumber(v);
+            if (node.op === "-") return Number.isFinite(n) ? -n : NaN;
+            return Number.isFinite(n) ? n : NaN;
+          }
+          if (node.kind === "bin") {
+            const a = evalNode(node.left);
+            const b = evalNode(node.right);
+
+            if (node.op === "&") {
+              // Excel-style concatenation
+              return String(a ?? "") + String(b ?? "");
+            }
+            if (node.op === "+" || node.op === "-" || node.op === "*" || node.op === "/") {
+              const na = toNumber(a);
+              const nb = toNumber(b);
+              if (!Number.isFinite(na) || !Number.isFinite(nb)) return NaN;
+              if (node.op === "+") return na + nb;
+              if (node.op === "-") return na - nb;
+              if (node.op === "*") return na * nb;
+              if (node.op === "/") return nb === 0 ? NaN : na / nb;
+            }
+            return "";
+          }
+          return "";
+        }
+
+        return evalNode(ast);
+      }
+
+      function computeFieldValue(table, record, field, depth = 0, visited = new Set()) {
+        if (!field) return "";
+        if (field.type !== "calculation") return record?.[field.id] ?? "";
+        const formula = String(field.formula ?? "");
+        if (!formula.trim()) return "";
+        try {
+          const tokens = tokenizeFormula(formula);
+          const ast = parseFormula(tokens);
+          const nameMap = buildFieldNameMap(table);
+          const val = evalFormulaAst(ast, {
+            table,
+            record,
+            nameMap,
+            visited,
+            depth,
+            maxDepth: 12,
+          });
+          // If math produced NaN, show blank (Excel-ish behavior for invalid arithmetic)
+          if (typeof val === "number" && !Number.isFinite(val)) return "";
+          return val;
+        } catch {
+          return "";
+        }
+      }
+
+      function getDisplayValue(table, record, field) {
+        if (!field) return "";
+        if (field.type === "calculation") return computeFieldValue(table, record, field);
+        return record?.[field.id] ?? "";
+      }
+
+      function Modal({ title, open, onClose, children, footer }) {
+        if (!open) return null;
+        return (
+          <div className="modalOverlay" onMouseDown={(e) => { if (e.target.classList.contains("modalOverlay")) onClose(); }}>
+            <div className="modal" onMouseDown={(e) => e.stopPropagation()}>
+              <div className="modalHead">
+                <div>{title}</div>
+                <button className="trash" onClick={onClose} aria-label="Close">✕</button>
+              </div>
+              <div className="modalBody">{children}</div>
+              {footer ? <div className="modalFoot">{footer}</div> : null}
+            </div>
+          </div>
+        );
+      }
+
+      function SectionTitle({ title, right }) {
+        return (
+          <div className="section-title">
+            <div className="t">{title}</div>
+            {right}
+          </div>
+        );
+      }
+
+      function EmptyState({ title, desc, action }) {
+        return (
+          <div className="card pad" style={{ borderStyle: "dashed", textAlign: "center", padding: 20 }}>
+            <div style={{ fontWeight: 800 }}>{title}</div>
+            <div className="muted" style={{ marginTop: 6, fontSize: 13 }}>{desc}</div>
+            {action ? <div style={{ marginTop: 14, display: "inline-flex" }}>{action}</div> : null}
+          </div>
+        );
+      }
+
+      function LayoutCanvas({
+        table,
+        layout,
+        selectedItemId,
+        onSelectItem,
+        onUpdateLayout,
+        paletteFieldId,
+        onClearPalette,
+      }) {
+        const ref = useRef(null);
+        const dragRef = useRef(null);
+        const fieldsById = table.fields;
+
+        function getCanvasPoint(e) {
+          const rect = ref.current?.getBoundingClientRect();
+          if (!rect) return { x: 0, y: 0 };
+          return { x: clamp(e.clientX - rect.left, 0, rect.width), y: clamp(e.clientY - rect.top, 0, rect.height) };
+        }
+
+        function startMove(item, e) {
+          const pt = getCanvasPoint(e);
+          dragRef.current = {
+            mode: "move",
+            itemId: item.id,
+            startX: pt.x, startY: pt.y,
+            origX: item.x, origY: item.y,
+          };
+          e.currentTarget.setPointerCapture?.(e.pointerId);
+        }
+
+        function startResize(item, e) {
+          const pt = getCanvasPoint(e);
+          dragRef.current = {
+            mode: "resize",
+            itemId: item.id,
+            startX: pt.x, startY: pt.y,
+            origW: item.w, origH: item.h,
+          };
+          e.currentTarget.setPointerCapture?.(e.pointerId);
+        }
+
+        function handlePointerDown(e) {
+          const pt = getCanvasPoint(e);
+
+          const hit = [...(layout.items ?? [])].reverse().find((it) =>
+            pt.x >= it.x && pt.x <= it.x + it.w && pt.y >= it.y && pt.y <= it.y + it.h
+          );
+
+          // place new field on empty space
+          if (!hit && paletteFieldId) {
+            const f = fieldsById[paletteFieldId];
+            if (!f) return;
+            const grid = layout.canvas.grid ?? 10;
+            const nx = snap(pt.x, grid);
+            const ny = snap(pt.y, grid);
+            const newItem = {
+              id: uid("itm"),
+              fieldId: paletteFieldId,
+              x: clamp(nx, 0, layout.canvas.width - 280),
+              y: clamp(ny, 0, layout.canvas.height - 70),
+              w: 320,
+              h: 70,
+              label: f.name,
+            };
+            onUpdateLayout({ ...layout, items: [...(layout.items ?? []), newItem] });
+            onSelectItem(newItem.id);
+            onClearPalette?.();
+            return;
+          }
+
+          if (!hit) { onSelectItem(null); return; }
+          onSelectItem(hit.id);
+          startMove(hit, e);
+        }
+
+        function handlePointerMove(e) {
+          const drag = dragRef.current;
+          if (!drag) return;
+
+          const pt = getCanvasPoint(e);
+          const dx = pt.x - drag.startX;
+          const dy = pt.y - drag.startY;
+
+          const grid = layout.canvas.grid ?? 10;
+          const minW = 120;
+          const minH = 50;
+
+          if (drag.mode === "move") {
+            const nextItems = (layout.items ?? []).map((it) => {
+              if (it.id !== drag.itemId) return it;
+              const nx = snap(it.x + dx, grid);
+              const ny = snap(it.y + dy, grid);
+              return {
+                ...it,
+                x: clamp(nx, 0, layout.canvas.width - it.w),
+                y: clamp(ny, 0, layout.canvas.height - it.h),
+              };
+            });
+            // reset anchor so drag feels stable
+            drag.startX = pt.x; drag.startY = pt.y;
+            onUpdateLayout({ ...layout, items: nextItems });
+          } else if (drag.mode === "resize") {
+            const nextItems = (layout.items ?? []).map((it) => {
+              if (it.id !== drag.itemId) return it;
+              const rawW = drag.origW + dx;
+              const rawH = drag.origH + dy;
+
+              const w = snap(Math.max(minW, rawW), grid);
+              const h = snap(Math.max(minH, rawH), grid);
+
+              const maxW = layout.canvas.width - it.x;
+              const maxH = layout.canvas.height - it.y;
+
+              return {
+                ...it,
+                w: clamp(w, minW, Math.max(minW, maxW)),
+                h: clamp(h, minH, Math.max(minH, maxH)),
+              };
+            });
+            onUpdateLayout({ ...layout, items: nextItems });
+          }
+        }
+
+        function handlePointerUp(e) {
+          dragRef.current = null;
+          e.currentTarget.releasePointerCapture?.(e.pointerId);
+        }
+
+        const grid = layout.canvas.grid ?? 0;
+
+        return (
+          <div className="card canvasCard">
+            <div className="canvasHead">
+              <div style={{ fontSize: 13 }}>
+                <b>Canvas</b>
+                <span className="muted"> · {layout.canvas.width}×{layout.canvas.height}px</span>
+                <span className="muted"> · grid {grid}</span>
+              </div>
+              <div className="muted" style={{ fontSize: 12 }}>
+                {paletteFieldId ? "Click canvas to place field. " : "Drag to move. "}
+                Select an item and drag the corner to resize.
+              </div>
+            </div>
+
+            <div
+              ref={ref}
+              className="canvasArea"
+              style={{ width: layout.canvas.width, height: layout.canvas.height }}
+              onPointerDown={handlePointerDown}
+              onPointerMove={handlePointerMove}
+              onPointerUp={handlePointerUp}
+            >
+              {grid ? <div className="gridBg" style={{ backgroundSize: `${grid}px ${grid}px` }} /> : null}
+
+              {(layout.items ?? []).map((it) => {
+                const f = fieldsById[it.fieldId];
+                const selected = it.id === selectedItemId;
+
+                return (
+                  <div
+                    key={it.id}
+                    className={"layoutItem" + (selected ? " selected" : "")}
+                    style={{ left: it.x, top: it.y, width: it.w, height: it.h, cursor: "move" }}
+                    onPointerDown={(e) => {
+                      e.stopPropagation();
+                      onSelectItem(it.id);
+                      startMove(it, e);
+                    }}
+                    onPointerUp={(e) => {
+                      dragRef.current = null;
+                      e.currentTarget.releasePointerCapture?.(e.pointerId);
+                    }}
+                  >
+                    <div className="layoutItemHead">
+                      <FieldIcon type={f?.type} />
+                      <span className="name" style={{ flex: 1 }}>{it.label || f?.name || "Field"}</span>
+                      <span className="muted" style={{ fontSize: 11 }}>{f?.type ?? ""}</span>
+                    </div>
+                    <div className="layoutItemBody">
+                      <div className="fakeControl"></div>
+                    </div>
+
+                    {selected ? (
+                      <div
+                        className="resizeHandle"
+                        title="Resize"
+                        onPointerDown={(e) => {
+                          e.stopPropagation();
+                          onSelectItem(it.id);
+                          startResize(it, e);
+                        }}
+                      />
+                    ) : null}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      }
+
+      function LayoutDrivenForm({ table, layout, recordDraft, setRecordDraft }) {
+        const items = layout?.items ?? [];
+        if (!layout) return null;
+
+        if (items.length === 0) {
+          return (
+            <EmptyState
+              title="No fields on this layout"
+              desc="Go to Layout and place fields on the canvas."
+            />
+          );
+        }
+
+        return (
+          <div className="formStage" style={{ width: layout.canvas.width, height: layout.canvas.height }}>
+            {items.map((it) => {
+              const f = table.fields[it.fieldId];
+              if (!f) return null;
+
+              const computed = f.type === "calculation"
+                ? computeFieldValue(table, recordDraft ?? {}, f)
+                : null;
+
+              const val = f.type === "calculation" ? computed : (recordDraft?.[f.id] ?? "");
+              const setVal = (next) => setRecordDraft((prev) => ({ ...prev, [f.id]: next }));
+
+              return (
+                <div
+                  key={it.id}
+                  className="formItem"
+                  style={{ left: it.x, top: it.y, width: it.w, height: it.h }}
+                >
+                  <div className="label" title={it.label || f.name}>{it.label || f.name}</div>
+                  <div className="control">
+                    {f.type === "calculation" ? (
+                      <input className="input" value={String(val ?? "")} readOnly />
+                    ) : f.type === "text" ? (
+                      <input className="input" value={val ?? ""} onChange={(e) => setVal(e.target.value)} />
+                    ) : f.type === "number" ? (
+                      <input className="input" type="number" value={val ?? ""} onChange={(e) => setVal(normalizeValue("number", e.target.value))} />
+                    ) : f.type === "date" ? (
+                      <input className="input" type="date" value={(val ?? "").slice(0,10)} onChange={(e) => setVal(normalizeValue("date", e.target.value))} />
+                    ) : f.type === "boolean" ? (
+                      <label style={{ display: "inline-flex", alignItems: "center", gap: 10 }}>
+                        <input type="checkbox" checked={!!val} onChange={(e) => setVal(e.target.checked)} />
+                        <span className="muted" style={{ fontSize: 13 }}>{val ? "True" : "False"}</span>
+                      </label>
+                    ) : f.type === "select" ? (
+                      <select value={val ?? ""} onChange={(e) => setVal(e.target.value)}>
+                        <option value="">—</option>
+                        {(f.options ?? []).map((opt) => <option key={opt} value={opt}>{opt}</option>)}
+                      </select>
+                    ) : (
+                      <input className="input" value={val ?? ""} onChange={(e) => setVal(e.target.value)} />
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        );
+      }
+
+      function DataListGrid({ table, fields, recordOrder, recordsById, selectedRecordId, onOpenRecord }) {
+        if (fields.length === 0) {
+          return <EmptyState title="No fields" desc="Add fields first in Fields." />;
+        }
+        return (
+          <div className="gridWrap">
+            <table>
+              <thead>
+                <tr>
+                  {fields.map((f) => (
+                    <th key={f.id}>
+                      <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+                        <FieldIcon type={f.type} />
+                        {f.name}
+                      </span>
+                    </th>
+                  ))}
+                  <th style={{ width: 110 }}></th>
+                </tr>
+              </thead>
+              <tbody>
+                {recordOrder.length === 0 ? (
+                  <tr>
+                    <td colSpan={fields.length + 1} className="muted" style={{ padding: 16 }}>
+                      No records.
+                    </td>
+                  </tr>
+                ) : (
+                  recordOrder.map((rid) => {
+                    const rec = recordsById[rid];
+                    if (!rec) return null;
+                    const active = rid === selectedRecordId;
+                    return (
+                      <tr key={rid} className={active ? "active" : ""}>
+                        {fields.map((f) => {
+                          const v = getDisplayValue(table, rec.data ?? {}, f);
+                          return <td key={f.id}>{formatValue(f.type === "calculation" ? "text" : f.type, v)}</td>;
+                        })}
+                        <td>
+                          <button className="btn-ghost" style={{ padding: "8px 10px", borderRadius: 12 }} onClick={() => onOpenRecord(rid)}>
+                            Open
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+        );
+      }
+
+      function DatabaseWebWidget() {
+        const [db, setDB] = useState(() => loadDB());
+        const [activeTableId, setActiveTableId] = useState(() => loadDB().tableOrder?.[0] ?? null);
+
+        // Tabs: Data: Record | Data: List | Fields | Layout
+        const [activeTab, setActiveTab] = useState("data_record");
+
+        // shared search
+        const [searchQuery, setSearchQuery] = useState("");
+
+        // Modals
+        const [isNewTableOpen, setIsNewTableOpen] = useState(false);
+        const [newTableName, setNewTableName] = useState("");
+
+        const [isFieldModalOpen, setIsFieldModalOpen] = useState(false);
+        const [fieldModalMode, setFieldModalMode] = useState("add"); // add | edit
+        const [editingFieldId, setEditingFieldId] = useState(null);
+
+        const [fieldDraft, setFieldDraft] = useState({
+          name: "",
+          type: "text",
+          required: false,
+          optionsText: "",
+          formula: "",
+        });
+
+        // Record navigation (single-record view)
+        const [selectedRecordId, setSelectedRecordId] = useState(null);
+        const [recordDraft, setRecordDraft] = useState(null);
+
+        // Layout selection + canvas interactions
+        const [selectedLayoutId, setSelectedLayoutId] = useState(null);
+        const [selectedLayoutItemId, setSelectedLayoutItemId] = useState(null);
+        const [paletteFieldId, setPaletteFieldId] = useState(null);
+
+        // Import
+        const [isImportOpen, setIsImportOpen] = useState(false);
+        const [importErr, setImportErr] = useState("");
+
+        const table = activeTableId ? db.tables[activeTableId] : null;
+
+        useEffect(() => { saveDB(db); }, [db]);
+
+        // ensure active table exists
+        useEffect(() => {
+          if (!activeTableId && db.tableOrder.length) setActiveTableId(db.tableOrder[0]);
+          if (activeTableId && !db.tables[activeTableId]) setActiveTableId(db.tableOrder[0] ?? null);
+        }, [db, activeTableId]);
+
+        // ensure selected layout per table
+        useEffect(() => {
+          if (!table) return;
+          const first = table.layoutOrder?.[0] ?? null;
+          if (!selectedLayoutId) setSelectedLayoutId(first);
+          if (selectedLayoutId && !table.layouts[selectedLayoutId]) setSelectedLayoutId(first);
+        }, [table, selectedLayoutId]);
+
+        const activeLayout = table && selectedLayoutId ? table.layouts[selectedLayoutId] : null;
+        const fields = table ? table.fieldOrder.map((id) => table.fields[id]).filter(Boolean) : [];
+
+        // filtered order for search + nav + list
+        const filteredRecordOrder = useMemo(() => {
+          if (!table) return [];
+          const order = table.recordOrder ?? [];
+          if (!searchQuery.trim()) return order;
+          return order.filter((rid) => {
+            const rec = table.records[rid];
+            if (!rec) return false;
+            // include calc values in search too
+            const q = searchQuery.trim().toLowerCase();
+            return fields.some((f) => {
+              const v = getDisplayValue(table, rec.data ?? {}, f);
+              return String(v ?? "").toLowerCase().includes(q);
+            });
+          });
+        }, [table, fields, searchQuery]);
+
+        const currentIndex = useMemo(() => {
+          if (!selectedRecordId) return -1;
+          return filteredRecordOrder.indexOf(selectedRecordId);
+        }, [filteredRecordOrder, selectedRecordId]);
+
+        // ensure selected record per table (pick first record if exists)
+        useEffect(() => {
+          if (!table) return;
+          const firstRec = table.recordOrder?.[0] ?? null;
+          if (!selectedRecordId && firstRec) {
+            openEditRecord(firstRec, { force: true });
+          }
+          if (selectedRecordId && !table.records[selectedRecordId]) {
+            const fallback = table.recordOrder?.[0] ?? null;
+            if (fallback) openEditRecord(fallback, { force: true });
+            else {
+              setSelectedRecordId(null);
+              setRecordDraft(null);
+            }
+          }
+          // eslint-disable-next-line react-hooks/exhaustive-deps
+        }, [table?.id]);
+
+        function updateTable(nextTable) {
+          setDB((prev) => ({ ...prev, tables: { ...prev.tables, [nextTable.id]: nextTable } }));
+        }
+
+        function renameTable(tableId) {
+          const t = db.tables[tableId];
+          if (!t) return;
+          const nextName = prompt("Table name", t.name);
+          if (nextName == null) return;
+          const name = nextName.trim();
+          if (!name) return;
+
+          setDB((prev) => {
+            const next = deepClone(prev);
+            if (next.tables[tableId]) next.tables[tableId].name = name;
+            return next;
+          });
+        }
+
+        function createTable() {
+          const name = newTableName.trim() || "Untitled";
+          const tableId = uid("tbl");
+          const layoutId = uid("lyt");
+          const next = {
+            id: tableId,
+            name,
+            fields: {},
+            fieldOrder: [],
+            records: {},
+            recordOrder: [],
+            layouts: {
+              [layoutId]: { id: layoutId, name: "Default Layout", canvas: { width: 720, height: 460, grid: 10 }, items: [] },
+            },
+            layoutOrder: [layoutId],
+          };
+          setDB((prev) => ({
+            ...prev,
+            tables: { ...prev.tables, [tableId]: next },
+            tableOrder: [...prev.tableOrder, tableId],
+          }));
+          setActiveTableId(tableId);
+          setActiveTab("fields");
+          setNewTableName("");
+          setIsNewTableOpen(false);
+
+          setSelectedLayoutId(layoutId);
+          setSelectedLayoutItemId(null);
+          setPaletteFieldId(null);
+          setSelectedRecordId(null);
+          setRecordDraft(null);
+          setSearchQuery("");
+        }
+
+        function deleteTable(tableId) {
+          setDB((prev) => {
+            const next = deepClone(prev);
+            delete next.tables[tableId];
+            next.tableOrder = next.tableOrder.filter((id) => id !== tableId);
+            return next;
+          });
+          if (activeTableId === tableId) setActiveTableId(null);
+        }
+
+        function openAddFieldModal() {
+          setFieldModalMode("add");
+          setEditingFieldId(null);
+          setFieldDraft({ name: "", type: "text", required: false, optionsText: "", formula: "" });
+          setIsFieldModalOpen(true);
+        }
+
+        function openEditFieldModal(field) {
+          setFieldModalMode("edit");
+          setEditingFieldId(field.id);
+          setFieldDraft({
+            name: field.name ?? "",
+            type: field.type ?? "text",
+            required: !!field.required,
+            optionsText: (field.options ?? []).join("\n"),
+            formula: field.formula ?? "",
+          });
+          setIsFieldModalOpen(true);
+        }
+
+        function applyFieldModal() {
+          if (!table) return;
+          const name = String(fieldDraft.name ?? "").trim();
+          if (!name) return;
+
+          const nextType = fieldDraft.type;
+          const options = nextType === "select"
+            ? String(fieldDraft.optionsText ?? "").split("\n").map(s => s.trim()).filter(Boolean)
+            : [];
+          const formula = nextType === "calculation" ? String(fieldDraft.formula ?? "") : "";
+
+          const nextTable = deepClone(table);
+
+          if (fieldModalMode === "add") {
+            const fieldId = uid("fld");
+            nextTable.fields[fieldId] = {
+              id: fieldId,
+              name,
+              type: nextType,
+              required: !!fieldDraft.required,
+              options,
+              ...(nextType === "calculation" ? { formula } : {}),
+            };
+            nextTable.fieldOrder.push(fieldId);
+
+            // add to existing records
+            for (const rid of nextTable.recordOrder) {
+              const rec = nextTable.records[rid];
+              if (!rec) continue;
+              rec.data[fieldId] = nextType === "boolean" ? false : "";
+              if (nextType === "calculation") rec.data[fieldId] = "";
+            }
+
+            updateTable(nextTable);
+            setIsFieldModalOpen(false);
+            return;
+          }
+
+          // edit existing
+          const fid = editingFieldId;
+          if (!fid || !nextTable.fields[fid]) return;
+
+          const prevField = nextTable.fields[fid];
+          const prevType = prevField.type;
+
+          nextTable.fields[fid] = {
+            ...prevField,
+            name,
+            type: nextType,
+            required: !!fieldDraft.required,
+            options,
+            ...(nextType === "calculation" ? { formula } : { formula: undefined }),
+          };
+
+          // normalize record data based on type changes
+          for (const rid of nextTable.recordOrder) {
+            const rec = nextTable.records[rid];
+            if (!rec) continue;
+            if (!(fid in rec.data)) rec.data[fid] = "";
+            // if switching to calc, clear stored value
+            if (nextType === "calculation") {
+              rec.data[fid] = "";
+            } else {
+              // if switching from calc to something else and stored is blank, keep blank
+              rec.data[fid] = normalizeValue(nextType, rec.data[fid]);
+              // if switching to boolean, coerce
+              if (nextType === "boolean") rec.data[fid] = !!rec.data[fid];
+            }
+          }
+
+          // refresh current draft
+          if (selectedRecordId && nextTable.records[selectedRecordId]) {
+            setRecordDraft(deepClone(coerceRecordForFields(nextTable.records[selectedRecordId].data, nextTable.fields)));
+          }
+
+          updateTable(nextTable);
+          setIsFieldModalOpen(false);
+        }
+
+        function deleteField(fieldId) {
+          if (!table) return;
+          const nextTable = deepClone(table);
+          delete nextTable.fields[fieldId];
+          nextTable.fieldOrder = nextTable.fieldOrder.filter((id) => id !== fieldId);
+
+          for (const rid of nextTable.recordOrder) {
+            const rec = nextTable.records[rid];
+            if (!rec) continue;
+            delete rec.data[fieldId];
+          }
+
+          for (const lid of nextTable.layoutOrder) {
+            const l = nextTable.layouts[lid];
+            if (!l) continue;
+            l.items = (l.items ?? []).filter((it) => it.fieldId !== fieldId);
+          }
+
+          updateTable(nextTable);
+
+          if (selectedRecordId && nextTable.records[selectedRecordId]) {
+            setRecordDraft(deepClone(coerceRecordForFields(nextTable.records[selectedRecordId].data, nextTable.fields)));
+          }
+        }
+
+        function createRecord() {
+          if (!table) return;
+          const nextTable = deepClone(table);
+          const rid = uid("rec");
+          const data = coerceRecordForFields({}, nextTable.fields);
+
+          for (const fid of nextTable.fieldOrder) {
+            const f = nextTable.fields[fid];
+            if (f?.type === "date" && !data[fid]) data[fid] = new Date().toISOString().slice(0,10);
+          }
+
+          nextTable.records[rid] = { id: rid, data };
+          nextTable.recordOrder.unshift(rid);
+          updateTable(nextTable);
+
+          setSelectedRecordId(rid);
+          setRecordDraft(deepClone(data));
+          setActiveTab("data_record");
+        }
+
+        function openEditRecord(rid, { force = false } = {}) {
+          if (!table) return;
+          const rec = table.records[rid];
+          if (!rec) return;
+
+          if (!force && selectedRecordId && recordDraft) {
+            const current = table.records[selectedRecordId]?.data;
+            if (current) {
+              const coerced = coerceRecordForFields(current, table.fields);
+              const dirty = JSON.stringify(coerced) !== JSON.stringify(recordDraft);
+              if (dirty) {
+                const ok = confirm("You have unsaved changes. Discard them?");
+                if (!ok) return;
+              }
+            }
+          }
+
+          setSelectedRecordId(rid);
+          setRecordDraft(deepClone(coerceRecordForFields(rec.data, table.fields)));
+        }
+
+        function saveRecord() {
+          if (!table || !selectedRecordId) return;
+          const nextTable = deepClone(table);
+          const rec = nextTable.records[selectedRecordId];
+          if (!rec) return;
+
+          for (const fid of nextTable.fieldOrder) {
+            const f = nextTable.fields[fid];
+            if (!f?.required) continue;
+            if (f.type === "calculation") continue; // calc not required in storage sense
+            const val = recordDraft?.[fid];
+            const empty = f.type === "boolean" ? false : !String(val ?? "").trim();
+            if (empty) { alert(`Required field missing: ${f.name}`); return; }
+          }
+
+          const coerced = coerceRecordForFields(recordDraft ?? {}, nextTable.fields);
+          rec.data = coerced;
+
+          // ensure calc not stored
+          for (const fid of nextTable.fieldOrder) {
+            const f = nextTable.fields[fid];
+            if (f?.type === "calculation") rec.data[fid] = "";
+          }
+
+          updateTable(nextTable);
+        }
+
+        function deleteRecord(rid) {
+          if (!table) return;
+          const nextTable = deepClone(table);
+          delete nextTable.records[rid];
+          nextTable.recordOrder = nextTable.recordOrder.filter((id) => id !== rid);
+          updateTable(nextTable);
+
+          if (selectedRecordId === rid) {
+            const nextRid = nextTable.recordOrder?.[0] ?? null;
+            if (nextRid) {
+              setSelectedRecordId(nextRid);
+              setRecordDraft(deepClone(coerceRecordForFields(nextTable.records[nextRid].data, nextTable.fields)));
+            } else {
+              setSelectedRecordId(null);
+              setRecordDraft(null);
+            }
+          }
+        }
+
+        function goPrev() {
+          if (currentIndex <= 0) return;
+          const rid = filteredRecordOrder[currentIndex - 1];
+          if (rid) openEditRecord(rid);
+        }
+
+        function goNext() {
+          if (currentIndex < 0) return;
+          if (currentIndex >= filteredRecordOrder.length - 1) return;
+          const rid = filteredRecordOrder[currentIndex + 1];
+          if (rid) openEditRecord(rid);
+        }
+
+        function createLayout() {
+          if (!table) return;
+          const nextTable = deepClone(table);
+          const lid = uid("lyt");
+          nextTable.layouts[lid] = { id: lid, name: `Layout ${nextTable.layoutOrder.length + 1}`, canvas: { width: 720, height: 460, grid: 10 }, items: [] };
+          nextTable.layoutOrder.push(lid);
+          updateTable(nextTable);
+
+          setSelectedLayoutId(lid);
+          setSelectedLayoutItemId(null);
+          setPaletteFieldId(null);
+        }
+
+        function updateLayout(nextLayout) {
+          if (!table) return;
+          const nextTable = deepClone(table);
+          nextTable.layouts[nextLayout.id] = nextLayout;
+          updateTable(nextTable);
+        }
+
+        function deleteLayout(layoutId) {
+          if (!table) return;
+          const nextTable = deepClone(table);
+          delete nextTable.layouts[layoutId];
+          nextTable.layoutOrder = nextTable.layoutOrder.filter((id) => id !== layoutId);
+          updateTable(nextTable);
+
+          setSelectedLayoutId(nextTable.layoutOrder[0] ?? null);
+          setSelectedLayoutItemId(null);
+          setPaletteFieldId(null);
+        }
+
+        function renameSelectedLayoutItem() {
+          if (!activeLayout || !selectedLayoutItemId) return;
+          const it = (activeLayout.items ?? []).find(x => x.id === selectedLayoutItemId);
+          if (!it) return;
+          const nextLabel = prompt("Label", it.label ?? "");
+          if (nextLabel == null) return;
+          const nextLayout = deepClone(activeLayout);
+          nextLayout.items = nextLayout.items.map(x => x.id === it.id ? { ...x, label: nextLabel } : x);
+          updateLayout(nextLayout);
+        }
+
+        function removeSelectedLayoutItem() {
+          if (!activeLayout || !selectedLayoutItemId) return;
+          if (!confirm("Remove this item from the layout?")) return;
+          const nextLayout = deepClone(activeLayout);
+          nextLayout.items = (nextLayout.items ?? []).filter(x => x.id !== selectedLayoutItemId);
+          updateLayout(nextLayout);
+          setSelectedLayoutItemId(null);
+        }
+
+        function bringFrontSelectedLayoutItem() {
+          if (!activeLayout || !selectedLayoutItemId) return;
+          const nextLayout = deepClone(activeLayout);
+          const idx = nextLayout.items.findIndex(x => x.id === selectedLayoutItemId);
+          if (idx < 0) return;
+          const [it] = nextLayout.items.splice(idx, 1);
+          nextLayout.items.push(it);
+          updateLayout(nextLayout);
+        }
+
+        async function handleImport(file) {
+          setImportErr("");
+          try {
+            const txt = await readFileAsText(file);
+            const parsed = JSON.parse(txt);
+            if (!parsed?.tables || !parsed?.tableOrder) throw new Error("Invalid format");
+            setDB(parsed);
+            setActiveTableId(parsed.tableOrder?.[0] ?? null);
+            setIsImportOpen(false);
+            setSearchQuery("");
+            setSelectedRecordId(null);
+            setRecordDraft(null);
+            setSelectedLayoutId(null);
+            setSelectedLayoutItemId(null);
+            setPaletteFieldId(null);
+            setActiveTab("data_record");
+          } catch (e) {
+            setImportErr(String(e?.message ?? e));
+          }
+        }
+
+        const selectedTableInfo = useMemo(() => {
+          if (!table) return null;
+          return {
+            name: table.name,
+            fields: table.fieldOrder?.length ?? 0,
+            records: table.recordOrder?.length ?? 0,
+          };
+        }, [table]);
+
+        return (
+          <div className="wrap">
+            {/* Header */}
+            <div className="header">
+              <div>
+                <h1>Database Web Widget</h1>
+                <div className="sub">Tables · Fields · Layouts · Record + List views · Calculation fields</div>
+              </div>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                <button className="btn-ghost" onClick={() => exportJSON(db)}>Export JSON</button>
+                <button className="btn-ghost" onClick={() => setIsImportOpen(true)}>Import JSON</button>
+                <button
+                  className="btn-ghost"
+                  onClick={() => {
+                    if (!confirm("Reset all data?")) return;
+                    const fresh = defaultDB();
+                    setDB(fresh);
+                    setActiveTableId(fresh.tableOrder[0] ?? null);
+                    setActiveTab("data_record");
+                    setSearchQuery("");
+                    setSelectedRecordId(null);
+                    setRecordDraft(null);
+                    setSelectedLayoutId(null);
+                    setSelectedLayoutItemId(null);
+                    setPaletteFieldId(null);
+                  }}
+                >
+                  Reset
+                </button>
+              </div>
+            </div>
+
+            <div className="row" style={{ marginTop: 16 }}>
+              {/* Sidebar */}
+              <div style={{ flex: "0 0 320px" }}>
+                <div className="card pad">
+                  <SectionTitle
+                    title="Tables"
+                    right={<button className="btn" style={{ padding: "8px 10px", borderRadius: 12 }} onClick={() => setIsNewTableOpen(true)}>+ New</button>}
+                  />
+
+                  <div className="list">
+                    {db.tableOrder.map((tid) => {
+                      const t = db.tables[tid];
+                      if (!t) return null;
+                      const active = tid === activeTableId;
+                      return (
+                        <div key={tid} className={"tableItem" + (active ? " active" : "")}>
+                          <button
+                            style={{ flex: 1, border: "none", background: "transparent", textAlign: "left", cursor: "pointer", padding: 0 }}
+                            onClick={() => {
+                              setActiveTableId(tid);
+                              setActiveTab("data_record");
+                              setSearchQuery("");
+                              setPaletteFieldId(null);
+                              setSelectedLayoutItemId(null);
+
+                              const firstRec = t.recordOrder?.[0] ?? null;
+                              if (firstRec) {
+                                setSelectedRecordId(firstRec);
+                                setRecordDraft(deepClone(coerceRecordForFields(t.records[firstRec]?.data ?? {}, t.fields)));
+                              } else {
+                                setSelectedRecordId(null);
+                                setRecordDraft(null);
+                              }
+
+                              const firstLayout = t.layoutOrder?.[0] ?? null;
+                              setSelectedLayoutId(firstLayout);
+                            }}
+                          >
+                            <div style={{ fontWeight: 800, fontSize: 14, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                              {t.name}
+                            </div>
+                            <div className="meta">{t.fieldOrder.length} fields · {t.recordOrder.length} records</div>
+                          </button>
+
+                          {/* Pencil icon ONLY (keep) */}
+                          <button
+                            className="iconBtn"
+                            title="Rename table"
+                            onClick={(e) => { e.stopPropagation(); renameTable(tid); }}
+                          >
+                            ✎
+                          </button>
+
+                          <button
+                            className="trash"
+                            title="Delete table"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (!confirm(`Delete table "${t.name}"? This cannot be undone.`)) return;
+                              deleteTable(tid);
+                            }}
+                          >
+                            🗑
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  <div className="divider"></div>
+
+                  {!selectedTableInfo ? (
+                    <div className="muted" style={{ fontSize: 13 }}>No table selected.</div>
+                  ) : (
+                    <div style={{ display: "grid", gap: 8 }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", gap: 10 }}>
+                        <span className="muted" style={{ fontSize: 12 }}>Selected table</span>
+                        <span style={{ fontSize: 12, fontWeight: 900, color: "#3f3f46", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          {selectedTableInfo.name}
+                        </span>
+                      </div>
+                      <div style={{ display: "flex", justifyContent: "space-between", gap: 10 }}>
+                        <span className="muted" style={{ fontSize: 12 }}>Fields</span>
+                        <span style={{ fontSize: 12, fontWeight: 900, color: "#3f3f46" }}>{selectedTableInfo.fields}</span>
+                      </div>
+                      <div style={{ display: "flex", justifyContent: "space-between", gap: 10 }}>
+                        <span className="muted" style={{ fontSize: 12 }}>Records</span>
+                        <span style={{ fontSize: 12, fontWeight: 900, color: "#3f3f46" }}>{selectedTableInfo.records}</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Main */}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                {!table ? (
+                  <EmptyState
+                    title="No table selected"
+                    desc="Create a table to get started."
+                    action={<button className="btn" onClick={() => setIsNewTableOpen(true)}>Create table</button>}
+                  />
+                ) : (
+                  <div className="col">
+                    <div className="card pad">
+                      <div className="header" style={{ alignItems: "center" }}>
+                        <div>
+                          <div style={{ fontSize: 18, fontWeight: 800 }}>{table.name}</div>
+                          <div className="muted" style={{ fontSize: 12 }}>
+                            {table.fieldOrder.length} fields · {table.recordOrder.length} records
+                          </div>
+                        </div>
+
+                        <div className="tabs">
+                          <button
+                            className={"tab" + (activeTab === "data_record" ? " active" : "")}
+                            onClick={() => setActiveTab("data_record")}
+                          >
+                            Data: Record
+                          </button>
+                          <button
+                            className={"tab" + (activeTab === "data_list" ? " active" : "")}
+                            onClick={() => setActiveTab("data_list")}
+                          >
+                            Data: List
+                          </button>
+
+                          <button
+                            className={"tab" + (activeTab === "fields" ? " active" : "")}
+                            onClick={() => setActiveTab("fields")}
+                          >
+                            Fields
+                          </button>
+
+                          <button
+                            className={"tab" + (activeTab === "layout" ? " active" : "")}
+                            onClick={() => setActiveTab("layout")}
+                          >
+                            Layout
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* DATA: RECORD */}
+                    {activeTab === "data_record" ? (
+                      <div className="card pad">
+                        <SectionTitle
+                          title="Data: Record"
+                          right={
+                            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                              <button className="btn-ghost" onClick={goPrev} disabled={currentIndex <= 0}>◀ Prev</button>
+                              <button className="btn-ghost" onClick={goNext} disabled={currentIndex < 0 || currentIndex >= filteredRecordOrder.length - 1}>Next ▶</button>
+                              <button className="btn-ghost" onClick={() => { if (!selectedRecordId) return; if (!confirm("Delete this record?")) return; deleteRecord(selectedRecordId); }} disabled={!selectedRecordId}>Delete</button>
+                              <button className="btn-ghost" onClick={saveRecord} disabled={!selectedRecordId || !recordDraft}>Save</button>
+                              <button className="btn" onClick={createRecord}>+ New</button>
+                            </div>
+                          }
+                        />
+
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 260px", gap: 12, alignItems: "end" }}>
+                          <div>
+                            <div className="muted" style={{ fontSize: 12, marginBottom: 6 }}>Search</div>
+                            <input className="input" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Search records…" />
+                          </div>
+                          <div>
+                            <div className="muted" style={{ fontSize: 12, marginBottom: 6 }}>Layout</div>
+                            <select value={selectedLayoutId ?? ""} onChange={(e) => setSelectedLayoutId(e.target.value || null)}>
+                              {(table.layoutOrder ?? []).map((lid) => {
+                                const l = table.layouts[lid];
+                                if (!l) return null;
+                                return <option key={lid} value={lid}>{l.name}</option>;
+                              })}
+                            </select>
+                          </div>
+                        </div>
+
+                        <div style={{ marginTop: 12 }}>
+                          {filteredRecordOrder.length === 0 ? (
+                            <EmptyState
+                              title={searchQuery.trim() ? "No matching records" : "No records yet"}
+                              desc={searchQuery.trim() ? "Try a different search or clear it." : "Create your first record."}
+                              action={
+                                <div style={{ display: "flex", gap: 10 }}>
+                                  {searchQuery.trim() ? <button className="btn-ghost" onClick={() => setSearchQuery("")}>Clear search</button> : null}
+                                  <button className="btn" onClick={createRecord}>+ New</button>
+                                </div>
+                              }
+                            />
+                          ) : (
+                            <>
+                              <div className="muted" style={{ fontSize: 12, marginBottom: 10 }}>
+                                Record {currentIndex >= 0 ? (currentIndex + 1) : "—"} of {filteredRecordOrder.length}
+                              </div>
+
+                              {!selectedRecordId || !recordDraft ? (
+                                <EmptyState title="No record loaded" desc="Use Prev/Next or create a new record." action={<button className="btn" onClick={createRecord}>+ New</button>} />
+                              ) : !activeLayout ? (
+                                <EmptyState title="No layout selected" desc="Select a layout above." />
+                              ) : (
+                                <LayoutDrivenForm table={table} layout={activeLayout} recordDraft={recordDraft} setRecordDraft={setRecordDraft} />
+                              )}
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    ) : null}
+
+                    {/* DATA: LIST (spreadsheet format) */}
+                    {activeTab === "data_list" ? (
+                      <div className="card pad">
+                        <SectionTitle
+                          title="Data: List"
+                          right={
+                            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                              <button className="btn-ghost" onClick={() => setSearchQuery("")} disabled={!searchQuery.trim()}>Clear</button>
+                              <button className="btn" onClick={createRecord}>+ New</button>
+                            </div>
+                          }
+                        />
+
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 12 }}>
+                          <div>
+                            <div className="muted" style={{ fontSize: 12, marginBottom: 6 }}>Search</div>
+                            <input className="input" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Search records…" />
+                          </div>
+                        </div>
+
+                        <div style={{ marginTop: 12 }}>
+                          <DataListGrid
+                            table={table}
+                            fields={fields}
+                            recordOrder={filteredRecordOrder}
+                            recordsById={table.records}
+                            selectedRecordId={selectedRecordId}
+                            onOpenRecord={(rid) => {
+                              openEditRecord(rid);
+                              setActiveTab("data_record");
+                            }}
+                          />
+                        </div>
+                      </div>
+                    ) : null}
+
+                    {/* FIELDS (editable name/type + calculation) */}
+                    {activeTab === "fields" ? (
+                      <div className="card pad">
+                        <SectionTitle
+                          title="Fields"
+                          right={<button className="btn" style={{ padding: "8px 10px" }} onClick={openAddFieldModal}>+ Add Field</button>}
+                        />
+
+                        {fields.length === 0 ? (
+                          <EmptyState
+                            title="No fields"
+                            desc="Add your first field to start building this table."
+                            action={<button className="btn" onClick={openAddFieldModal}>Add field</button>}
+                          />
+                        ) : (
+                          <div className="list" style={{ gap: 10 }}>
+                            {fields.map((f) => (
+                              <div key={f.id} className="card" style={{ padding: 12, borderRadius: 16 }}>
+                                <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+                                  <FieldIcon type={f.type} />
+                                  <div style={{ flex: 1 }}>
+                                    <div style={{ fontWeight: 900 }}>{f.name}</div>
+                                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 6, alignItems: "center" }}>
+                                      <span className="badge">{f.type}</span>
+                                      {f.required ? <span className="badge" style={{ background: "#fffbeb" }}>required</span> : null}
+                                      {f.type === "select" && (f.options?.length ?? 0) > 0 ? <span className="muted" style={{ fontSize: 12 }}>{f.options.length} options</span> : null}
+                                      {f.type === "calculation" ? <span className="muted" style={{ fontSize: 12 }}>fx: {String(f.formula ?? "").slice(0, 40)}{String(f.formula ?? "").length > 40 ? "…" : ""}</span> : null}
+                                    </div>
+                                  </div>
+
+                                  <button className="btn-ghost" onClick={() => openEditFieldModal(f)}>Edit</button>
+
+                                  <button
+                                    className="btn-ghost"
+                                    onClick={() => {
+                                      if (!confirm(`Delete field "${f.name}"?`)) return;
+                                      deleteField(f.id);
+                                    }}
+                                  >
+                                    Delete
+                                  </button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ) : null}
+
+                    {/* LAYOUT: canvas-only */}
+                    {activeTab === "layout" ? (
+                      !activeLayout ? (
+                        <EmptyState
+                          title="No layout"
+                          desc="Create a layout to start designing."
+                          action={<button className="btn" onClick={() => {
+                            // create layout inline
+                            const next = deepClone(table);
+                            const lid = uid("lyt");
+                            next.layouts[lid] = { id: lid, name: `Layout ${next.layoutOrder.length + 1}`, canvas: { width: 720, height: 460, grid: 10 }, items: [] };
+                            next.layoutOrder.push(lid);
+                            updateTable(next);
+                            setSelectedLayoutId(lid);
+                          }}>Create layout</button>}
+                        />
+                      ) : (
+                        <div className="card pad">
+                          <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "end", marginBottom: 12 }}>
+                            <div style={{ flex: "1 1 240px" }}>
+                              <div className="muted" style={{ fontSize: 12, marginBottom: 6 }}>Layout</div>
+                              <select
+                                value={selectedLayoutId ?? ""}
+                                onChange={(e) => {
+                                  setSelectedLayoutId(e.target.value || null);
+                                  setSelectedLayoutItemId(null);
+                                  setPaletteFieldId(null);
+                                }}
+                              >
+                                {(table.layoutOrder ?? []).map((lid) => {
+                                  const l = table.layouts[lid];
+                                  if (!l) return null;
+                                  return <option key={lid} value={lid}>{l.name}</option>;
+                                })}
+                              </select>
+                            </div>
+
+                            <div style={{ flex: "1 1 240px" }}>
+                              <div className="muted" style={{ fontSize: 12, marginBottom: 6 }}>Field to place</div>
+                              <select value={paletteFieldId ?? ""} onChange={(e) => setPaletteFieldId(e.target.value || null)}>
+                                <option value="">— (drag existing items)</option>
+                                {fields.map((f) => <option key={f.id} value={f.id}>{f.name} ({f.type})</option>)}
+                              </select>
+                            </div>
+
+                            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                              <button className="btn-ghost" onClick={() => setPaletteFieldId(null)} disabled={!paletteFieldId}>Clear field</button>
+                              <button className="btn-ghost" onClick={createLayout}>+ New Layout</button>
+                              <button
+                                className="btn-ghost"
+                                onClick={() => {
+                                  if (!confirm(`Delete layout "${activeLayout.name}"?`)) return;
+                                  deleteLayout(activeLayout.id);
+                                }}
+                                disabled={(table.layoutOrder?.length ?? 0) <= 1}
+                                title={(table.layoutOrder?.length ?? 0) <= 1 ? "Keep at least one layout" : "Delete layout"}
+                              >
+                                Delete Layout
+                              </button>
+                            </div>
+
+                            {selectedLayoutItemId ? (
+                              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                                <button className="btn-ghost" onClick={renameSelectedLayoutItem}>Rename Label</button>
+                                <button className="btn-ghost" onClick={bringFrontSelectedLayoutItem}>Bring Front</button>
+                                <button className="btn-ghost" onClick={removeSelectedLayoutItem}>Remove</button>
+                              </div>
+                            ) : null}
+                          </div>
+
+                          <LayoutCanvas
+                            table={table}
+                            layout={activeLayout}
+                            selectedItemId={selectedLayoutItemId}
+                            onSelectItem={setSelectedLayoutItemId}
+                            onUpdateLayout={updateLayout}
+                            paletteFieldId={paletteFieldId}
+                            onClearPalette={() => setPaletteFieldId(null)}
+                          />
+                        </div>
+                      )
+                    ) : null}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* New table modal */}
+            <Modal
+              title="New Table"
+              open={isNewTableOpen}
+              onClose={() => setIsNewTableOpen(false)}
+              footer={
+                <>
+                  <button className="btn-ghost" onClick={() => setIsNewTableOpen(false)}>Cancel</button>
+                  <button className="btn" onClick={createTable} disabled={!newTableName.trim()}>Create</button>
+                </>
+              }
+            >
+              <div className="col" style={{ gap: 10 }}>
+                <div style={{ fontSize: 13, fontWeight: 800, color: "#3f3f46" }}>Name</div>
+                <input className="input" value={newTableName} onChange={(e) => setNewTableName(e.target.value)} placeholder="e.g. Projects" />
+              </div>
+            </Modal>
+
+            {/* Add/Edit field modal */}
+            <Modal
+              title={fieldModalMode === "add" ? "Add Field" : "Edit Field"}
+              open={isFieldModalOpen}
+              onClose={() => setIsFieldModalOpen(false)}
+              footer={
+                <>
+                  <button className="btn-ghost" onClick={() => setIsFieldModalOpen(false)}>Cancel</button>
+                  <button className="btn" onClick={applyFieldModal} disabled={!String(fieldDraft.name ?? "").trim()}>
+                    {fieldModalMode === "add" ? "Add" : "Save"}
+                  </button>
+                </>
+              }
+            >
+              <div className="col" style={{ gap: 12 }}>
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 800, color: "#3f3f46", marginBottom: 6 }}>Field name</div>
+                  <input className="input" value={fieldDraft.name} onChange={(e) => setFieldDraft((d) => ({ ...d, name: e.target.value }))} />
+                  <div className="hint">
+                    Tip: calculation formulas can reference fields by name (case-insensitive). If you use spaces in field names, prefer an underscore version (e.g., <b>First Name</b> → <b>first_name</b>).
+                  </div>
+                </div>
+
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, alignItems: "end" }}>
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 800, color: "#3f3f46", marginBottom: 6 }}>Type</div>
+                    <select
+                      value={fieldDraft.type}
+                      onChange={(e) => setFieldDraft((d) => ({ ...d, type: e.target.value }))}
+                    >
+                      {FIELD_TYPES.map((t) => <option key={t.id} value={t.id}>{t.label}</option>)}
+                    </select>
+                  </div>
+                  <label style={{ display: "inline-flex", alignItems: "center", gap: 10, padding: "8px 2px" }}>
+                    <input
+                      type="checkbox"
+                      checked={fieldDraft.required}
+                      onChange={(e) => setFieldDraft((d) => ({ ...d, required: e.target.checked }))}
+                      disabled={fieldDraft.type === "calculation"}
+                      title={fieldDraft.type === "calculation" ? "Calculation fields are computed (not stored)" : ""}
+                    />
+                    <span style={{ fontSize: 13, fontWeight: 800, color: "#3f3f46" }}>Required</span>
+                  </label>
+                </div>
+
+                {fieldDraft.type === "select" ? (
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 800, color: "#3f3f46", marginBottom: 6 }}>Options (one per line)</div>
+                    <textarea
+                      value={fieldDraft.optionsText}
+                      onChange={(e) => setFieldDraft((d) => ({ ...d, optionsText: e.target.value }))}
+                      placeholder={"Option A\nOption B\nOption C"}
+                    />
+                  </div>
+                ) : null}
+
+                {fieldDraft.type === "calculation" ? (
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 800, color: "#3f3f46", marginBottom: 6 }}>Formula</div>
+                    <textarea
+                      value={fieldDraft.formula}
+                      onChange={(e) => setFieldDraft((d) => ({ ...d, formula: e.target.value }))}
+                      placeholder={'fname&" "&lname'}
+                    />
+                    <div className="hint">
+                      Excel-style examples:<br />
+                      • <b>fname&" "&lname</b> (concatenate)<br />
+                      • <b>"Hello, "&fname</b><br />
+                      • <b>qty*price</b> (numeric math)
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+            </Modal>
+
+            {/* Import modal */}
+            <Modal
+              title="Import JSON"
+              open={isImportOpen}
+              onClose={() => setIsImportOpen(false)}
+              footer={<button className="btn-ghost" onClick={() => setIsImportOpen(false)}>Close</button>}
+            >
+              <div className="col" style={{ gap: 10 }}>
+                <div style={{ fontSize: 13, color: "#3f3f46" }}>Choose an export file previously created by this widget.</div>
+                <input
+                  type="file"
+                  accept="application/json"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) handleImport(f);
+                  }}
+                />
+                {importErr ? <div style={{ color: "var(--danger)", fontWeight: 800 }}>Error: {importErr}</div> : null}
+              </div>
+            </Modal>
+          </div>
+        );
+      }
+
+      const root = ReactDOM.createRoot(document.getElementById("root"));
+      root.render(<DatabaseWebWidget />);
+    </script>
+  </body>
+</html>
