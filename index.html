@@ -2,68 +2,659 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>iPhone Compatible AR Widget</title>
-    
-    <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/4.0.0/model-viewer.min.js"></script>
-
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dependent T-Test Analyzer</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        :root { --brand-color: #007AFF; }
-        body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: #fafafa; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; }
-        
+        :root {
+            --primary: #2563eb;
+            --bg: #f8fafc;
+            --card-bg: #ffffff;
+            --text: #1e293b;
+            --border: #e2e8f0;
+            --success: #22c55e;
+            --danger: #ef4444;
+            --hover: #f1f5f9;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            padding: 20px;
+            line-height: 1.5;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        h1, h2, h3 {
+            color: #0f172a;
+            margin-top: 0;
+        }
+
         .widget-card {
-            width: 90vw; height: 80vh; max-width: 400px; max-height: 600px;
-            background: white; border-radius: 24px; box-shadow: 0 20px 40px rgba(0,0,0,0.1);
-            display: flex; flex-direction: column; position: relative;
+            background: var(--card-bg);
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            padding: 24px;
+            margin-bottom: 24px;
+            border: 1px solid var(--border);
         }
 
-        model-viewer {
-            width: 100%; flex: 1;
-            --poster-color: transparent;
-            background-color: #f8f8f8;
+        /* --- Input Table Styling --- */
+        .input-controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
         }
 
-        /* The Custom AR Button */
-        #ar-button {
-            background-color: var(--brand-color);
-            color: white; border-radius: 12px; border: none;
-            padding: 14px 28px; font-size: 16px; font-weight: 600;
-            position: absolute; bottom: 30px; left: 50%;
-            transform: translateX(-50%);
-            white-space: nowrap; cursor: pointer;
-            box-shadow: 0 8px 15px rgba(0,122,255,0.3);
-            display: flex; align-items: center; gap: 10px;
+        .control-btn {
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            border: 1px solid var(--border);
+            background: white;
+            transition: all 0.2s;
+        }
+        .control-btn:hover { background: var(--hover); }
+        .btn-add { color: var(--primary); border-color: var(--primary); }
+        .btn-clear { color: var(--danger); border-color: var(--danger); }
+
+        .data-table-container {
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            margin-bottom: 20px;
         }
 
-        #ar-button:active { transform: translateX(-50%) scale(0.95); }
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
 
-        .header { padding: 20px; text-align: center; }
-        .header h1 { font-size: 1.1rem; margin: 0; color: #1d1d1f; }
+        .data-table th {
+            position: sticky;
+            top: 0;
+            background: #f1f5f9;
+            z-index: 10;
+            padding: 10px;
+            text-align: left;
+            font-size: 0.9em;
+            color: #475569;
+        }
+
+        .data-table td {
+            padding: 8px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .score-input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #cbd5e1;
+            border-radius: 4px;
+            font-size: 16px;
+            box-sizing: border-box; 
+        }
+        .score-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            background: #f0f9ff;
+        }
+        
+        .remove-row-btn {
+            background: none;
+            border: none;
+            color: #94a3b8;
+            cursor: pointer;
+            font-size: 18px;
+        }
+        .remove-row-btn:hover { color: var(--danger); }
+
+        .action-btn {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 14px 28px;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background 0.2s, transform 0.1s;
+            display: block;
+            width: 100%;
+        }
+        .action-btn:hover { background-color: #1d4ed8; }
+
+        /* --- Visualizations --- */
+        .charts-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            height: 400px;
+        }
+        
+        /* Stack charts on small screens */
+        @media (max-width: 768px) {
+            .charts-grid {
+                grid-template-columns: 1fr;
+                height: auto;
+            }
+            .chart-container {
+                height: 350px;
+                margin-bottom: 20px;
+            }
+        }
+
+        .chart-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            min-height: 300px;
+        }
+
+        /* --- Results Styling --- */
+        .results-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 30px;
+        }
+
+        .stats-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .stats-table td { padding: 10px; border-bottom: 1px solid var(--border); }
+        .stats-table tr:last-child td { border-bottom: none; }
+
+        .result-row td:last-child {
+            font-family: monospace;
+            font-size: 1.1em;
+            text-align: right;
+        }
+
+        .stat-box {
+            background: #f0f9ff;
+            border-left: 5px solid var(--primary);
+            padding: 20px;
+            margin-top: 25px;
+            border-radius: 0 8px 8px 0;
+        }
+
+        .error {
+            color: var(--danger);
+            background: #fee2e2;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+            font-weight: 600;
+            display: none;
+        }
     </style>
 </head>
 <body>
 
+<div class="container">
+    <h1>Dependent (Paired) T-Test Analyzer</h1>
+
     <div class="widget-card">
-        <div class="header">
-            <h1>AR Product Viewer</h1>
+        <h2>1. Data Input</h2>
+        <p>Enter the Pre and Post scores for each participant below.</p>
+        
+        <div class="input-controls">
+            <button class="control-btn btn-add" onclick="addRow()">+ Add Participant</button>
+            <button class="control-btn" onclick="populateFakeData()">Load Example Data</button>
+            <button class="control-btn btn-clear" onclick="clearData()">Clear All</button>
         </div>
 
-        <model-viewer 
-            src="https://modelviewer.dev/shared-assets/models/Astronaut.glb" 
-            ios-src="https://modelviewer.dev/shared-assets/models/Astronaut.usdz"
-            ar
-            ar-modes="webxr scene-viewer quick-look"
-            camera-controls
-            auto-rotate
-            shadow-intensity="1">
-            
-            <button slot="ar-button" id="ar-button">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M12 2l-9 5v10l9 5 9-5V7l-9-5zm0 2.18L18.82 8 12 11.82 5.18 8 12 4.18zM5 15.82V9.82l6 3.33v6l-6-3.33zm14 0l-6 3.33v-6l6-3.33v6z"/></svg>
-                View in Your Space
-            </button>
+        <div class="data-table-container">
+            <table class="data-table" id="inputTable">
+                <thead>
+                    <tr>
+                        <th style="width: 50px;">#</th>
+                        <th>Pre-Test Score</th>
+                        <th>Post-Test Score</th>
+                        <th style="width: 40px;"></th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody"></tbody>
+            </table>
+        </div>
 
-        </model-viewer>
+        <button class="action-btn" onclick="analyzeData()">Calculate & Visualize</button>
+        <div id="errorMsg" class="error"></div>
     </div>
+
+    <div class="widget-card" id="vizSection" style="display:none;">
+        <h2>2. Visual Analysis</h2>
+        <div class="charts-grid">
+            <div class="chart-container">
+                <canvas id="slopeChart"></canvas>
+            </div>
+            <div class="chart-container">
+                <canvas id="barChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div class="widget-card" id="resultsSection" style="display:none;">
+        <h2>3. Descriptive Statistics</h2>
+        <div class="results-grid">
+            <div>
+                <h3>Pre-Test Scores</h3>
+                <table class="stats-table" id="group1Stats"></table>
+            </div>
+            <div>
+                <h3>Post-Test Scores</h3>
+                <table class="stats-table" id="group2Stats"></table>
+            </div>
+        </div>
+    </div>
+
+    <div class="widget-card" id="ttestSection" style="display:none;">
+        <h2>4. T-Test Results</h2>
+        <table class="stats-table">
+            <tbody>
+                <tr class="result-row"><td>Mean Difference ($\bar{d}$)</td><td id="meanDiff"></td></tr>
+                <tr class="result-row"><td>Std Dev of Diff ($s_d$)</td><td id="stdDevDiff"></td></tr>
+                <tr class="result-row"><td>Std Error of Diff ($SE_{diff}$)</td><td id="stdErrorDiff"></td></tr>
+                <tr class="result-row"><td>Degrees of Freedom ($df$)</td><td id="dfVal"></td></tr>
+                
+                <tr class="result-row" style="border-top: 1px solid #e2e8f0;">
+                    <td>95% CI Lower Limit</td>
+                    <td id="ciLower"></td>
+                </tr>
+                <tr class="result-row">
+                    <td>95% CI Upper Limit</td>
+                    <td id="ciUpper"></td>
+                </tr>
+
+                <tr class="result-row" style="background:#f8fafc; border-top: 2px solid #e2e8f0;"><td><strong>T-Statistic ($t$)</strong></td><td id="tStat" style="font-weight:bold;"></td></tr>
+                <tr class="result-row" style="background:#f8fafc"><td><strong>P-Value (Two-Tailed)</strong></td><td id="pValue" style="font-weight:bold;"></td></tr>
+            </tbody>
+        </table>
+        
+        <div class="stat-box" id="interpretationBox">
+            <h3>Interpretation:</h3>
+            <p id="interpretation"></p>
+        </div>
+    </div>
+</div>
+
+<script>
+    // --- State Management ---
+    let slopeChartInstance = null; 
+    let barChartInstance = null;
+    let rowCount = 0;
+
+    // --- Table UI Functions ---
+    function createRowHTML(index, preVal = '', postVal = '') {
+        return `
+            <tr id="row-${index}">
+                <td style="color:#64748b; font-weight:500;">P${index}</td>
+                <td><input type="number" class="score-input pre-input" placeholder="Pre" value="${preVal}"></td>
+                <td><input type="number" class="score-input post-input" placeholder="Post" value="${postVal}"></td>
+                <td><button class="remove-row-btn" onclick="removeRow(${index})">×</button></td>
+            </tr>
+        `;
+    }
+
+    function addRow(preVal = '', postVal = '') {
+        rowCount++;
+        document.getElementById('tableBody').insertAdjacentHTML('beforeend', createRowHTML(rowCount, preVal, postVal));
+    }
+
+    function removeRow(index) {
+        const row = document.getElementById(`row-${index}`);
+        if(row) row.remove();
+    }
+
+    function clearData() {
+        document.getElementById('tableBody').innerHTML = '';
+        rowCount = 0;
+        for(let i=0; i<5; i++) addRow();
+        hideResults();
+    }
+
+    function populateFakeData() {
+        document.getElementById('tableBody').innerHTML = '';
+        rowCount = 0;
+        const fakePre = [72, 68, 80, 55, 90, 65, 78, 82, 60, 75];
+        const fakePost = [78, 75, 85, 62, 92, 72, 85, 88, 70, 80];
+        for(let i=0; i<fakePre.length; i++) addRow(fakePre[i], fakePost[i]);
+        hideResults();
+    }
+
+    function hideResults() {
+        ['vizSection', 'resultsSection', 'ttestSection', 'errorMsg'].forEach(id => 
+            document.getElementById(id).style.display = 'none'
+        );
+    }
+
+    function getTableData() {
+        const preInputs = document.querySelectorAll('.pre-input');
+        const postInputs = document.querySelectorAll('.post-input');
+        let preData = [], postData = [];
+
+        preInputs.forEach((input, i) => {
+            const v1 = parseFloat(input.value);
+            const v2 = parseFloat(postInputs[i].value);
+            if(!isNaN(v1) && !isNaN(v2)) {
+                preData.push(v1);
+                postData.push(v2);
+            }
+        });
+        return { preData, postData };
+    }
+
+
+    // --- STATS LIBRARIES ---
+
+    function getMean(arr) {
+        if(!arr.length) return 0;
+        return arr.reduce((a, b) => a + b, 0) / arr.length;
+    }
+
+    function getMedian(arr) {
+        const sorted = [...arr].sort((a, b) => a - b);
+        const mid = Math.floor(sorted.length / 2);
+        return sorted.length % 2 !== 0 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+    }
+
+    function getMode(arr) {
+        const freq = {};
+        arr.forEach(val => freq[val] = (freq[val] || 0) + 1);
+        let maxFreq = 0;
+        let modes = [];
+        for (const key in freq) {
+            if (freq[key] > maxFreq) {
+                maxFreq = freq[key];
+                modes = [key];
+            } else if (freq[key] === maxFreq && freq[key] > 1) {
+                modes.push(key);
+            }
+        }
+        if (modes.length === arr.length || maxFreq === 1) return "No Mode";
+        return modes.join(', ');
+    }
+
+    function getStdDev(arr, mean) {
+        if (arr.length < 2) return 0;
+        const squareDiffs = arr.map(val => Math.pow(val - mean, 2));
+        const avgSquareDiff = squareDiffs.reduce((a, b) => a + b, 0) / (arr.length - 1);
+        return Math.sqrt(avgSquareDiff);
+    }
+
+    function getStandardError(sd, n) {
+        if (n < 2) return 0;
+        return sd / Math.sqrt(n);
+    }
+
+    /* --- ADVANCED MATH FUNCTIONS (P-Value & CI) --- */
+
+    function logGamma(n) {
+        const p = [
+            0.99999999999980993, 676.5203681218851, -1259.1392167224028,
+            771.32342877765313, -176.61502916214059, 12.507343278686905,
+            -0.13857109526572012, 9.9843695780195716e-6, 1.5056327351493116e-7
+        ];
+        let x = n, y = n, t = n + 7.5, sum = p[0];
+        for (let i = 1; i < p.length; i++) sum += p[i] / ++y;
+        return 0.5 * Math.log(2 * Math.PI) + (x + 0.5) * Math.log(t) - t + Math.log(sum);
+    }
+
+    function betaInc(x, a, b) {
+        if (x < 0.0 || x > 1.0) return 0; 
+        if (x > (a + 1.0) / (a + b + 2.0)) return 1.0 - betaInc(1.0 - x, b, a);
+        
+        const lbeta = logGamma(a) + logGamma(b) - logGamma(a + b);
+        const front = Math.exp(a * Math.log(x) + b * Math.log(1.0 - x) - lbeta) / a;
+
+        const ITMAX = 200;
+        const EPS = 3.0e-7;
+        let am = 1.0, bm = 1.0, az = 1.0, qab = a + b, qap = a + 1.0, qam = a - 1.0;
+        let bz = 1.0 - qab * x / qap;
+        
+        for (let i = 1; i <= ITMAX; i++) {
+            const em = i;
+            const tem = em + em;
+            let d = em * (b - i) * x / ((qam + tem) * (a + tem));
+            let ap = az + d * am;
+            let bp = bz + d * bm;
+            d = -(a + em) * (qab + em) * x / ((a + tem) * (qap + tem));
+            let app = ap + d * az;
+            let bpp = bp + d * bz;
+            let aold = az;
+            am = ap / bpp; bm = bp / bpp; az = app / bpp; bz = 1.0;
+            if (Math.abs(az - aold) < (EPS * Math.abs(az))) return front * az;
+        }
+        return front * az;
+    }
+
+    function calculateTTestPValue(t, df) {
+        const absT = Math.abs(t);
+        const x = df / (df + (absT * absT));
+        return betaInc(x, df / 2, 0.5);
+    }
+
+    function getCriticalT(df, targetAlpha) {
+        let low = 0;
+        let high = 50; 
+        let mid = 0;
+        for(let i=0; i<100; i++) {
+            mid = (low + high) / 2;
+            const p = calculateTTestPValue(mid, df);
+            if(p < targetAlpha) high = mid;
+            else low = mid;
+        }
+        return mid;
+    }
+
+    // --- MAIN ANALYSIS LOGIC ---
+    function analyzeData() {
+        const errorDiv = document.getElementById('errorMsg');
+        errorDiv.style.display = "none";
+        
+        const { preData, postData } = getTableData();
+
+        if (preData.length < 2) {
+            errorDiv.innerText = "Error: Please enter at least 2 complete pairs.";
+            errorDiv.style.display = "block";
+            return;
+        }
+
+        const meanPre = getMean(preData);
+        const meanPost = getMean(postData);
+
+        // 1. Render Charts
+        document.getElementById('vizSection').style.display = 'block';
+        renderSlopeChart(preData, postData, meanPre, meanPost);
+        renderBarChart(meanPre, meanPost);
+
+        // 2. Descriptive Stats
+        const statsConfigs = [
+            { data: preData, id: 'group1Stats', meanVal: meanPre },
+            { data: postData, id: 'group2Stats', meanVal: meanPost }
+        ];
+
+        statsConfigs.forEach(config => {
+            const n = config.data.length;
+            const mean = config.meanVal;
+            const median = getMedian(config.data);
+            const mode = getMode(config.data);
+            const std = getStdDev(config.data, mean);
+            const se = getStandardError(std, n); 
+
+            let html = `
+                <tr><td>Count (N)</td><td>${n}</td></tr>
+                <tr><td>Mean</td><td>${mean.toFixed(2)}</td></tr>
+                <tr><td>Median</td><td>${median.toFixed(2)}</td></tr>
+                <tr><td>Mode</td><td>${mode}</td></tr>
+                <tr><td>Standard Deviation (SD)</td><td>${std.toFixed(2)}</td></tr>
+                <tr><td>Standard Error (SE)</td><td>${se.toFixed(2)}</td></tr>
+            `;
+            document.getElementById(config.id).innerHTML = html;
+        });
+        document.getElementById('resultsSection').style.display = 'block';
+
+        // 3. Dependent T-Test Stats
+        const differences = [];
+        for(let i=0; i < preData.length; i++) {
+            differences.push(postData[i] - preData[i]);
+        }
+
+        const n = differences.length;
+        const meanDiff = getMean(differences);
+        const stdDevDiff = getStdDev(differences, meanDiff);
+        const stdErrorDiff = stdDevDiff / Math.sqrt(n); 
+        const tStat = meanDiff / stdErrorDiff;
+        const df = n - 1;
+        
+        // P-Value & CI
+        let pValue = calculateTTestPValue(tStat, df);
+        if (pValue < 1e-10) pValue = 0; 
+
+        const alpha = 0.05;
+        const tCritical = getCriticalT(df, alpha); 
+        const marginOfError = tCritical * stdErrorDiff;
+        const lowerCI = meanDiff - marginOfError;
+        const upperCI = meanDiff + marginOfError;
+
+        document.getElementById('meanDiff').innerText = meanDiff.toFixed(4);
+        document.getElementById('stdDevDiff').innerText = stdDevDiff.toFixed(4);
+        document.getElementById('stdErrorDiff').innerText = stdErrorDiff.toFixed(4);
+        document.getElementById('dfVal').innerText = df;
+        
+        document.getElementById('ciLower').innerText = lowerCI.toFixed(4);
+        document.getElementById('ciUpper').innerText = upperCI.toFixed(4);
+        
+        const tStatCell = document.getElementById('tStat');
+        tStatCell.innerText = tStat.toFixed(4);
+        tStatCell.style.color = tStat > 0 ? 'var(--success)' : (tStat < 0 ? 'var(--danger)' : 'inherit');
+
+        const pValueDisplay = pValue < 0.0001 ? "< 0.0001" : pValue.toFixed(4);
+        const pValueCell = document.getElementById('pValue');
+        pValueCell.innerText = pValueDisplay;
+       
+        // Interpretation
+        const interpBox = document.getElementById('interpretationBox');
+        let interpretation = "";
+
+        if (pValue < alpha) {
+            pValueCell.style.color = "var(--success)";
+            interpBox.style.borderColor = "var(--success)";
+            interpBox.style.background = "#f0fdf4";
+            interpretation = `
+                <strong>Statistically Significant:</strong> P-value (${pValueDisplay}) < 0.05.
+                <br>We can be 95% confident that the true difference between the means lies between <strong>${lowerCI.toFixed(2)}</strong> and <strong>${upperCI.toFixed(2)}</strong>.
+                <br>Because this interval does not include zero, the result is significant.
+            `;
+        } else {
+            pValueCell.style.color = "var(--danger)";
+            interpBox.style.borderColor = "var(--danger)";
+            interpBox.style.background = "#fef2f2";
+            interpretation = `
+                <strong>Not Significant:</strong> P-value (${pValueDisplay}) > 0.05.
+                <br>The 95% Confidence Interval is from <strong>${lowerCI.toFixed(2)}</strong> to <strong>${upperCI.toFixed(2)}</strong>.
+                <br>Because this interval includes zero, we cannot rule out the possibility that there is no difference.
+            `;
+        }
+        document.getElementById('interpretation').innerHTML = interpretation;
+        document.getElementById('ttestSection').style.display = 'block';
+    }
+
+    // --- CHART 1: Slope Chart (Individuals) ---
+    function renderSlopeChart(preData, postData, meanPre, meanPost) {
+        const ctx = document.getElementById('slopeChart').getContext('2d');
+        if (slopeChartInstance) slopeChartInstance.destroy();
+
+        const individualDatasets = preData.map((preVal, index) => ({
+            label: `P${index + 1}`,
+            data: [preVal, postData[index]],
+            borderColor: 'rgba(150, 150, 150, 0.2)',
+            borderWidth: 2,
+            tension: 0,
+            pointRadius: 3,
+            fill: false
+        }));
+
+        const averageDataset = {
+            label: 'AVERAGE',
+            data: [meanPre, meanPost],
+            borderColor: '#2563eb',
+            backgroundColor: '#2563eb',
+            borderWidth: 5,
+            tension: 0,
+            pointRadius: 6,
+            fill: false
+        };
+
+        slopeChartInstance = new Chart(ctx, {
+            type: 'line',
+            data: { labels: ['Pre-Test', 'Post-Test'], datasets: [...individualDatasets, averageDataset] },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    title: { display: true, text: 'Individual Score Changes (Slope)' },
+                    legend: { labels: { filter: i => i.text === 'AVERAGE', font: { weight: 'bold' } } }
+                },
+                scales: { 
+                    y: { beginAtZero: false, title: { display: true, text: 'Score' } },
+                    x: { offset: true } // Keeps points away from edges
+                }
+            }
+        });
+    }
+
+    // --- CHART 2: Bar Chart (Means) ---
+    function renderBarChart(meanPre, meanPost) {
+        const ctx = document.getElementById('barChart').getContext('2d');
+        if (barChartInstance) barChartInstance.destroy();
+
+        barChartInstance = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: ['Pre-Test Mean', 'Post-Test Mean'],
+                datasets: [{
+                    label: 'Mean Score',
+                    data: [meanPre, meanPost],
+                    backgroundColor: ['#94a3b8', '#2563eb'], // Grey for Pre, Blue for Post
+                    borderColor: ['#64748b', '#1d4ed8'],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    title: { display: true, text: 'Average Score Comparison' },
+                    legend: { display: false },
+                    tooltip: {
+                         callbacks: {
+                            label: function(context) {
+                                return `Mean: ${context.parsed.y.toFixed(2)}`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: { 
+                        beginAtZero: true, 
+                        title: { display: true, text: 'Mean Score' } 
+                    }
+                }
+            }
+        });
+    }
+
+    window.onload = populateFakeData;
+</script>
 
 </body>
 </html>
