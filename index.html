@@ -3,657 +3,331 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dependent T-Test Analyzer</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <title>Evolution of Hawaiian Volcanoes</title>
     <style>
         :root {
-            --primary: #2563eb;
-            --bg: #f8fafc;
-            --card-bg: #ffffff;
-            --text: #1e293b;
-            --border: #e2e8f0;
-            --success: #22c55e;
-            --danger: #ef4444;
-            --hover: #f1f5f9;
+            --sky-top: #87CEEB;
+            --sky-bot: #E0F6FF;
+            --ocean-top: #006994;
+            --ocean-bot: #00334e;
+            --lava: #FF4500;
+            --rock: #4A4A4A;
+            --sand: #F4A460;
+            --coral: #FF7F50;
+            --text-color: #333;
+            --panel-bg: rgba(255, 255, 255, 0.95);
+            --accent: #D32F2F;
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background-color: var(--bg);
-            color: var(--text);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
             padding: 20px;
-            line-height: 1.5;
-        }
-
-        .container {
-            max-width: 1000px;
-            margin: 0 auto;
-        }
-
-        h1, h2, h3 {
-            color: #0f172a;
-            margin-top: 0;
-        }
-
-        .widget-card {
-            background: var(--card-bg);
-            border-radius: 12px;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-            padding: 24px;
-            margin-bottom: 24px;
-            border: 1px solid var(--border);
-        }
-
-        /* --- Input Table Styling --- */
-        .input-controls {
+            background-color: #f4f4f4;
+            color: var(--text-color);
             display: flex;
-            gap: 10px;
-            margin-bottom: 15px;
+            justify-content: center;
         }
 
-        .control-btn {
-            padding: 8px 16px;
-            border-radius: 6px;
-            font-weight: 600;
-            cursor: pointer;
-            border: 1px solid var(--border);
+        /* Main Widget Container */
+        .widget-container {
+            width: 100%;
+            max-width: 900px;
             background: white;
-            transition: all 0.2s;
-        }
-        .control-btn:hover { background: var(--hover); }
-        .btn-add { color: var(--primary); border-color: var(--primary); }
-        .btn-clear { color: var(--danger); border-color: var(--danger); }
-
-        .data-table-container {
-            max-height: 300px;
-            overflow-y: auto;
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            margin-bottom: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
         }
 
-        .data-table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-
-        .data-table th {
-            position: sticky;
-            top: 0;
-            background: #f1f5f9;
-            z-index: 10;
-            padding: 10px;
-            text-align: left;
-            font-size: 0.9em;
-            color: #475569;
-        }
-
-        .data-table td {
-            padding: 8px;
-            border-bottom: 1px solid var(--border);
-        }
-
-        .score-input {
-            width: 100%;
-            padding: 8px;
-            border: 1px solid #cbd5e1;
-            border-radius: 4px;
-            font-size: 16px;
-            box-sizing: border-box; 
-        }
-        .score-input:focus {
-            outline: none;
-            border-color: var(--primary);
-            background: #f0f9ff;
-        }
-        
-        .remove-row-btn {
-            background: none;
-            border: none;
-            color: #94a3b8;
-            cursor: pointer;
-            font-size: 18px;
-        }
-        .remove-row-btn:hover { color: var(--danger); }
-
-        .action-btn {
-            background-color: var(--primary);
+        /* Header */
+        header {
+            background: var(--rock);
             color: white;
-            border: none;
-            padding: 14px 28px;
-            border-radius: 8px;
-            font-size: 18px;
-            font-weight: 700;
-            cursor: pointer;
-            transition: background 0.2s, transform 0.1s;
-            display: block;
-            width: 100%;
-        }
-        .action-btn:hover { background-color: #1d4ed8; }
-
-        /* --- Visualizations --- */
-        .charts-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-            height: 400px;
-        }
-        
-        /* Stack charts on small screens */
-        @media (max-width: 768px) {
-            .charts-grid {
-                grid-template-columns: 1fr;
-                height: auto;
-            }
-            .chart-container {
-                height: 350px;
-                margin-bottom: 20px;
-            }
+            padding: 20px;
+            text-align: center;
         }
 
-        .chart-container {
+        header h1 { margin: 0; font-size: 1.5rem; }
+        header p { margin: 5px 0 0; font-size: 0.9rem; opacity: 0.8; }
+
+        /* Visualization Area (The Stage) */
+        .visual-stage {
             position: relative;
+            height: 350px;
+            width: 100%;
+            background: linear-gradient(to bottom, var(--sky-top) 0%, var(--sky-bot) 50%, var(--ocean-top) 50%, var(--ocean-bot) 100%);
+            overflow: hidden;
+            transition: background 1s;
+        }
+
+        /* SVG Styles */
+        svg {
             width: 100%;
             height: 100%;
-            min-height: 300px;
+            display: block;
         }
 
-        /* --- Results Styling --- */
-        .results-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 30px;
+        .volcano-shape { fill: var(--rock); transition: d 1s ease-in-out, transform 1s ease; }
+        .magma-chamber { fill: var(--lava); opacity: 0; transition: opacity 0.5s, d 1s ease-in-out; }
+        .plume { fill: url(#plumeGradient); opacity: 0; transition: opacity 0.5s; }
+        .water-level { stroke: rgba(255,255,255,0.3); stroke-width: 2; stroke-dasharray: 5,5; }
+        .label-text { font-size: 14px; fill: white; text-shadow: 0 1px 3px black; opacity: 0; transition: opacity 0.5s; }
+        
+        /* Animation Classes */
+        .active-magma { opacity: 1 !important; }
+        .erupting { animation: pulseMagma 2s infinite; }
+        
+        @keyframes pulseMagma {
+            0% { fill: #FF4500; }
+            50% { fill: #FFD700; }
+            100% { fill: #FF4500; }
         }
 
-        .stats-table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-        .stats-table td { padding: 10px; border-bottom: 1px solid var(--border); }
-        .stats-table tr:last-child td { border-bottom: none; }
-
-        .result-row td:last-child {
-            font-family: monospace;
-            font-size: 1.1em;
-            text-align: right;
+        /* Controls / Timeline */
+        .timeline-controls {
+            display: flex;
+            justify-content: space-between;
+            background: #eee;
+            padding: 10px 20px;
+            overflow-x: auto;
         }
 
-        .stat-box {
-            background: #f0f9ff;
-            border-left: 5px solid var(--primary);
-            padding: 20px;
-            margin-top: 25px;
-            border-radius: 0 8px 8px 0;
+        .stage-btn {
+            background: none;
+            border: none;
+            padding: 10px;
+            cursor: pointer;
+            font-weight: bold;
+            color: #666;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s;
+            flex-shrink: 0;
         }
 
-        .error {
-            color: var(--danger);
-            background: #fee2e2;
+        .stage-btn:hover { color: var(--accent); }
+        .stage-btn.active { color: var(--accent); border-bottom: 3px solid var(--accent); }
+
+        /* Information Panel */
+        .info-panel {
+            padding: 25px;
+            background: var(--panel-bg);
+            min-height: 200px;
+        }
+
+        .info-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            margin-bottom: 15px;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 10px;
+        }
+
+        .stage-title { font-size: 1.4rem; color: var(--accent); margin: 0; }
+        .stage-duration { font-size: 0.9rem; color: #666; font-style: italic; }
+
+        .info-content { display: flex; gap: 20px; flex-wrap: wrap; }
+        .description { flex: 2; min-width: 300px; line-height: 1.6; }
+        .stats-box {
+            flex: 1;
+            min-width: 200px;
+            background: #f9f9f9;
             padding: 15px;
             border-radius: 8px;
-            margin-top: 15px;
-            font-weight: 600;
-            display: none;
+            font-size: 0.9rem;
+            border-left: 4px solid var(--accent);
+        }
+
+        .stats-box h4 { margin-top: 0; color: #444; }
+        .stats-box ul { padding-left: 20px; margin-bottom: 0; }
+
+        /* Responsive */
+        @media (max-width: 600px) {
+            .visual-stage { height: 250px; }
+            .info-content { flex-direction: column; }
         }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <h1>Dependent (Paired) T-Test Analyzer</h1>
+<div class="widget-container">
+    <header>
+        <h1>Hawaiian Volcano Lifecycle</h1>
+        <p>From deep-sea vent to sunken atoll: The assembly line of the Pacific Plate</p>
+    </header>
 
-    <div class="widget-card">
-        <h2>1. Data Input</h2>
-        <p>Enter the Pre and Post scores for each participant below.</p>
-        
-        <div class="input-controls">
-            <button class="control-btn btn-add" onclick="addRow()">+ Add Participant</button>
-            <button class="control-btn" onclick="populateFakeData()">Load Example Data</button>
-            <button class="control-btn btn-clear" onclick="clearData()">Clear All</button>
-        </div>
+    <div class="visual-stage">
+        <svg viewBox="0 0 800 400" preserveAspectRatio="xMidYMid slice">
+            <defs>
+                <linearGradient id="plumeGradient" x1="0%" y1="100%" x2="0%" y2="0%">
+                    <stop offset="0%" style="stop-color:#ff0000;stop-opacity:1" />
+                    <stop offset="100%" style="stop-color:#ff8c00;stop-opacity:0" />
+                </linearGradient>
+            </defs>
+            
+            <path id="hotspot" class="plume" d="M 350 400 L 450 400 L 400 250 Z" />
 
-        <div class="data-table-container">
-            <table class="data-table" id="inputTable">
-                <thead>
-                    <tr>
-                        <th style="width: 50px;">#</th>
-                        <th>Pre-Test Score</th>
-                        <th>Post-Test Score</th>
-                        <th style="width: 40px;"></th>
-                    </tr>
-                </thead>
-                <tbody id="tableBody"></tbody>
-            </table>
-        </div>
+            <path id="volcano" class="volcano-shape" d="" />
+            
+            <path id="magma" class="magma-chamber" d="" />
 
-        <button class="action-btn" onclick="analyzeData()">Calculate & Visualize</button>
-        <div id="errorMsg" class="error"></div>
+            <line x1="0" y1="200" x2="800" y2="200" class="water-level" />
+            <text x="10" y="190" fill="white" font-size="12" opacity="0.7">Sea Level</text>
+            <text x="10" y="390" fill="rgba(255,255,255,0.3)" font-size="12">Seafloor (Pacific Plate)</text>
+
+            <text id="viz-label" x="400" y="80" text-anchor="middle" class="label-text">Label</text>
+        </svg>
     </div>
 
-    <div class="widget-card" id="vizSection" style="display:none;">
-        <h2>2. Visual Analysis</h2>
-        <div class="charts-grid">
-            <div class="chart-container">
-                <canvas id="slopeChart"></canvas>
-            </div>
-            <div class="chart-container">
-                <canvas id="barChart"></canvas>
-            </div>
-        </div>
+    <div class="timeline-controls">
+        <button class="stage-btn active" onclick="setStage(0)">1. Preshield</button>
+        <button class="stage-btn" onclick="setStage(1)">2. Shield-Building</button>
+        <button class="stage-btn" onclick="setStage(2)">3. Postshield</button>
+        <button class="stage-btn" onclick="setStage(3)">4. Rejuvenated</button>
+        <button class="stage-btn" onclick="setStage(4)">5. Erosion & Atoll</button>
     </div>
 
-    <div class="widget-card" id="resultsSection" style="display:none;">
-        <h2>3. Descriptive Statistics</h2>
-        <div class="results-grid">
-            <div>
-                <h3>Pre-Test Scores</h3>
-                <table class="stats-table" id="group1Stats"></table>
-            </div>
-            <div>
-                <h3>Post-Test Scores</h3>
-                <table class="stats-table" id="group2Stats"></table>
-            </div>
+    <div class="info-panel">
+        <div class="info-header">
+            <h2 id="st-title" class="stage-title">Stage Title</h2>
+            <span id="st-duration" class="stage-duration">Duration</span>
         </div>
-    </div>
-
-    <div class="widget-card" id="ttestSection" style="display:none;">
-        <h2>4. T-Test Results</h2>
-        <table class="stats-table">
-            <tbody>
-                <tr class="result-row"><td>Mean Difference ($\bar{d}$)</td><td id="meanDiff"></td></tr>
-                <tr class="result-row"><td>Std Dev of Diff ($s_d$)</td><td id="stdDevDiff"></td></tr>
-                <tr class="result-row"><td>Std Error of Diff ($SE_{diff}$)</td><td id="stdErrorDiff"></td></tr>
-                <tr class="result-row"><td>Degrees of Freedom ($df$)</td><td id="dfVal"></td></tr>
-                
-                <tr class="result-row" style="border-top: 1px solid #e2e8f0;">
-                    <td>95% CI Lower Limit</td>
-                    <td id="ciLower"></td>
-                </tr>
-                <tr class="result-row">
-                    <td>95% CI Upper Limit</td>
-                    <td id="ciUpper"></td>
-                </tr>
-
-                <tr class="result-row" style="background:#f8fafc; border-top: 2px solid #e2e8f0;"><td><strong>T-Statistic ($t$)</strong></td><td id="tStat" style="font-weight:bold;"></td></tr>
-                <tr class="result-row" style="background:#f8fafc"><td><strong>P-Value (Two-Tailed)</strong></td><td id="pValue" style="font-weight:bold;"></td></tr>
-            </tbody>
-        </table>
-        
-        <div class="stat-box" id="interpretationBox">
-            <h3>Interpretation:</h3>
-            <p id="interpretation"></p>
+        <div class="info-content">
+            <div id="st-desc" class="description">Description placeholder.</div>
+            <div class="stats-box">
+                <h4>Key Features</h4>
+                <ul id="st-features"></ul>
+                <p style="margin-top:10px; font-size:0.85rem;"><strong>Current Example:</strong> <span id="st-example">Example</span></p>
+            </div>
         </div>
     </div>
 </div>
 
 <script>
-    // --- State Management ---
-    let slopeChartInstance = null; 
-    let barChartInstance = null;
-    let rowCount = 0;
+    const stages = [
+        {
+            title: "1. Preshield Stage",
+            duration: "~200,000 years",
+            desc: "The birth of the volcano. Occurring entirely underwater, the hot spot initiates growth with infrequent, small-volume eruptions. Pillow lavas construct a steep-sided volcanic pile. Magma rises directly from the center.",
+            features: ["Submarine activity", "Steep-sided 'pillow lava' pile", "Alkalic magma composition", "Infrequent eruptions"],
+            example: "Kama‘ehuakanaloa (formerly Lō‘ihi)",
+            path: "M 200 400 Q 300 250 400 240 Q 500 250 600 400 Z", 
+            magma: "M 380 400 L 400 240 L 420 400 Z", 
+            hotspotActive: true,
+            erupting: true,
+            label: "Submarine Growth"
+        },
+        {
+            title: "2. Shield-Building Stage",
+            duration: "Up to 2 Million years",
+            desc: "The main growth phase. The volcano breaches the surface and grows rapidly into a broad shield. The enormous weight connects to the seafloor. Magma rises centrally and erupts voluminously from the summit.",
+            features: ["Breaches sea level", "Massive shield shape", "Caldera formation", "Crustal subsidence"],
+            example: "Mauna Loa, Kīlauea",
+            path: "M 0 400 Q 200 150 350 120 L 450 120 Q 600 150 800 400 Z",
+            magma: "M 360 400 L 380 120 L 420 120 L 440 400 Z",
+            hotspotActive: true,
+            erupting: true,
+            label: "Massive Shield (Active)"
+        },
+        {
+            title: "3. Postshield Stage",
+            duration: "500k - 1 Million years",
+            desc: "The volcano moves slightly off the hotspot center. Eruptions become more explosive (cinder cones) and 'cap' the volcano. Notice the magma path has shifted slightly to the right of the center.",
+            features: ["Explosive cinder eruptions", "Steeper summit capping", "Fills calderas", "Declining eruption rate"],
+            example: "Mauna Kea, Hualālai, Haleakalā",
+            path: "M 50 400 Q 220 120 400 80 Q 580 120 750 400 Z",
+            magma: "M 380 400 L 420 80 L 440 400 Z", 
+            hotspotActive: true, 
+            erupting: false, 
+            label: "Capping Phase"
+        },
+        {
+            title: "4. Rejuvenated Stage",
+            duration: "Several Million years",
+            desc: "After a long quiet period of erosion, the volcano has moved far from the hotspot. The flanks have smoothed out as reefs build up the sides (filling in valleys). Small eruptions blast through these reefs on the side.",
+            features: ["Follows erosion period", "Reefs build on flanks", "Volcanic maars", "Side vent eruptions"],
+            example: "Ko‘olau (Diamond Head), West Maui",
+            // VISUAL UPDATE: Removed jagged valleys. Smooth shoulders (reefs) building up to the center.
+            path: "M 80 400 Q 200 220 280 200 Q 330 180 380 140 L 400 130 L 420 140 Q 470 180 520 200 Q 600 220 720 400 Z",
+            // MAGMA UPDATE: Side vent on the right shoulder.
+            magma: "M 480 400 L 510 200 L 530 400 Z", 
+            hotspotActive: false,
+            erupting: false,
+            label: "Reef Growth & Side Vent"
+        },
+        {
+            title: "5. Erosion, Subsidence & Atoll",
+            duration: "10-30 Million years+",
+            desc: "The volcano sinks below sea level. Smooth coral mounds grow upward at the edges to stay in the sunlight, forming a ring (atoll) with a central lagoon.",
+            features: ["Heavy erosion & Landslides", "Coral Atoll formation", "Subsidence below sea level", "Lagoon formation"],
+            example: "Kure Atoll, Emperor Seamounts",
+            // VISUAL UPDATE: Smooth mounds (Q curves) instead of spikes.
+            path: "M 200 400 Q 280 250 300 210 Q 310 180 330 215 Q 400 250 470 215 Q 490 180 500 210 Q 520 250 600 400 Z",
+            magma: "M 400 400 L 400 400 Z", 
+            hotspotActive: false,
+            erupting: false,
+            label: "Coral Atoll / Guyot"
+        }
+    ];
 
-    // --- Table UI Functions ---
-    function createRowHTML(index, preVal = '', postVal = '') {
-        return `
-            <tr id="row-${index}">
-                <td style="color:#64748b; font-weight:500;">P${index}</td>
-                <td><input type="number" class="score-input pre-input" placeholder="Pre" value="${preVal}"></td>
-                <td><input type="number" class="score-input post-input" placeholder="Post" value="${postVal}"></td>
-                <td><button class="remove-row-btn" onclick="removeRow(${index})">×</button></td>
-            </tr>
-        `;
-    }
+    // DOM Elements
+    const volcanoPath = document.getElementById('volcano');
+    const magmaPath = document.getElementById('magma');
+    const hotspot = document.getElementById('hotspot');
+    const vizLabel = document.getElementById('viz-label');
+    
+    const uiTitle = document.getElementById('st-title');
+    const uiDuration = document.getElementById('st-duration');
+    const uiDesc = document.getElementById('st-desc');
+    const uiFeatures = document.getElementById('st-features');
+    const uiExample = document.getElementById('st-example');
+    const buttons = document.querySelectorAll('.stage-btn');
 
-    function addRow(preVal = '', postVal = '') {
-        rowCount++;
-        document.getElementById('tableBody').insertAdjacentHTML('beforeend', createRowHTML(rowCount, preVal, postVal));
-    }
+    function setStage(index) {
+        const stage = stages[index];
 
-    function removeRow(index) {
-        const row = document.getElementById(`row-${index}`);
-        if(row) row.remove();
-    }
-
-    function clearData() {
-        document.getElementById('tableBody').innerHTML = '';
-        rowCount = 0;
-        for(let i=0; i<5; i++) addRow();
-        hideResults();
-    }
-
-    function populateFakeData() {
-        document.getElementById('tableBody').innerHTML = '';
-        rowCount = 0;
-        const fakePre = [72, 68, 80, 55, 90, 65, 78, 82, 60, 75];
-        const fakePost = [78, 75, 85, 62, 92, 72, 85, 88, 70, 80];
-        for(let i=0; i<fakePre.length; i++) addRow(fakePre[i], fakePost[i]);
-        hideResults();
-    }
-
-    function hideResults() {
-        ['vizSection', 'resultsSection', 'ttestSection', 'errorMsg'].forEach(id => 
-            document.getElementById(id).style.display = 'none'
-        );
-    }
-
-    function getTableData() {
-        const preInputs = document.querySelectorAll('.pre-input');
-        const postInputs = document.querySelectorAll('.post-input');
-        let preData = [], postData = [];
-
-        preInputs.forEach((input, i) => {
-            const v1 = parseFloat(input.value);
-            const v2 = parseFloat(postInputs[i].value);
-            if(!isNaN(v1) && !isNaN(v2)) {
-                preData.push(v1);
-                postData.push(v2);
-            }
+        buttons.forEach((btn, i) => {
+            if(i === index) btn.classList.add('active');
+            else btn.classList.remove('active');
         });
-        return { preData, postData };
-    }
 
-
-    // --- STATS LIBRARIES ---
-
-    function getMean(arr) {
-        if(!arr.length) return 0;
-        return arr.reduce((a, b) => a + b, 0) / arr.length;
-    }
-
-    function getMedian(arr) {
-        const sorted = [...arr].sort((a, b) => a - b);
-        const mid = Math.floor(sorted.length / 2);
-        return sorted.length % 2 !== 0 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
-    }
-
-    function getMode(arr) {
-        const freq = {};
-        arr.forEach(val => freq[val] = (freq[val] || 0) + 1);
-        let maxFreq = 0;
-        let modes = [];
-        for (const key in freq) {
-            if (freq[key] > maxFreq) {
-                maxFreq = freq[key];
-                modes = [key];
-            } else if (freq[key] === maxFreq && freq[key] > 1) {
-                modes.push(key);
-            }
-        }
-        if (modes.length === arr.length || maxFreq === 1) return "No Mode";
-        return modes.join(', ');
-    }
-
-    function getStdDev(arr, mean) {
-        if (arr.length < 2) return 0;
-        const squareDiffs = arr.map(val => Math.pow(val - mean, 2));
-        const avgSquareDiff = squareDiffs.reduce((a, b) => a + b, 0) / (arr.length - 1);
-        return Math.sqrt(avgSquareDiff);
-    }
-
-    function getStandardError(sd, n) {
-        if (n < 2) return 0;
-        return sd / Math.sqrt(n);
-    }
-
-    /* --- ADVANCED MATH FUNCTIONS (P-Value & CI) --- */
-
-    function logGamma(n) {
-        const p = [
-            0.99999999999980993, 676.5203681218851, -1259.1392167224028,
-            771.32342877765313, -176.61502916214059, 12.507343278686905,
-            -0.13857109526572012, 9.9843695780195716e-6, 1.5056327351493116e-7
-        ];
-        let x = n, y = n, t = n + 7.5, sum = p[0];
-        for (let i = 1; i < p.length; i++) sum += p[i] / ++y;
-        return 0.5 * Math.log(2 * Math.PI) + (x + 0.5) * Math.log(t) - t + Math.log(sum);
-    }
-
-    function betaInc(x, a, b) {
-        if (x < 0.0 || x > 1.0) return 0; 
-        if (x > (a + 1.0) / (a + b + 2.0)) return 1.0 - betaInc(1.0 - x, b, a);
+        volcanoPath.setAttribute('d', stage.path);
+        magmaPath.setAttribute('d', stage.magma);
         
-        const lbeta = logGamma(a) + logGamma(b) - logGamma(a + b);
-        const front = Math.exp(a * Math.log(x) + b * Math.log(1.0 - x) - lbeta) / a;
+        hotspot.style.opacity = stage.hotspotActive ? '0.8' : '0';
 
-        const ITMAX = 200;
-        const EPS = 3.0e-7;
-        let am = 1.0, bm = 1.0, az = 1.0, qab = a + b, qap = a + 1.0, qam = a - 1.0;
-        let bz = 1.0 - qab * x / qap;
-        
-        for (let i = 1; i <= ITMAX; i++) {
-            const em = i;
-            const tem = em + em;
-            let d = em * (b - i) * x / ((qam + tem) * (a + tem));
-            let ap = az + d * am;
-            let bp = bz + d * bm;
-            d = -(a + em) * (qab + em) * x / ((a + tem) * (qap + tem));
-            let app = ap + d * az;
-            let bpp = bp + d * bz;
-            let aold = az;
-            am = ap / bpp; bm = bp / bpp; az = app / bpp; bz = 1.0;
-            if (Math.abs(az - aold) < (EPS * Math.abs(az))) return front * az;
-        }
-        return front * az;
-    }
-
-    function calculateTTestPValue(t, df) {
-        const absT = Math.abs(t);
-        const x = df / (df + (absT * absT));
-        return betaInc(x, df / 2, 0.5);
-    }
-
-    function getCriticalT(df, targetAlpha) {
-        let low = 0;
-        let high = 50; 
-        let mid = 0;
-        for(let i=0; i<100; i++) {
-            mid = (low + high) / 2;
-            const p = calculateTTestPValue(mid, df);
-            if(p < targetAlpha) high = mid;
-            else low = mid;
-        }
-        return mid;
-    }
-
-    // --- MAIN ANALYSIS LOGIC ---
-    function analyzeData() {
-        const errorDiv = document.getElementById('errorMsg');
-        errorDiv.style.display = "none";
-        
-        const { preData, postData } = getTableData();
-
-        if (preData.length < 2) {
-            errorDiv.innerText = "Error: Please enter at least 2 complete pairs.";
-            errorDiv.style.display = "block";
-            return;
-        }
-
-        const meanPre = getMean(preData);
-        const meanPost = getMean(postData);
-
-        // 1. Render Charts
-        document.getElementById('vizSection').style.display = 'block';
-        renderSlopeChart(preData, postData, meanPre, meanPost);
-        renderBarChart(meanPre, meanPost);
-
-        // 2. Descriptive Stats
-        const statsConfigs = [
-            { data: preData, id: 'group1Stats', meanVal: meanPre },
-            { data: postData, id: 'group2Stats', meanVal: meanPost }
-        ];
-
-        statsConfigs.forEach(config => {
-            const n = config.data.length;
-            const mean = config.meanVal;
-            const median = getMedian(config.data);
-            const mode = getMode(config.data);
-            const std = getStdDev(config.data, mean);
-            const se = getStandardError(std, n); 
-
-            let html = `
-                <tr><td>Count (N)</td><td>${n}</td></tr>
-                <tr><td>Mean</td><td>${mean.toFixed(2)}</td></tr>
-                <tr><td>Median</td><td>${median.toFixed(2)}</td></tr>
-                <tr><td>Mode</td><td>${mode}</td></tr>
-                <tr><td>Standard Deviation (SD)</td><td>${std.toFixed(2)}</td></tr>
-                <tr><td>Standard Error (SE)</td><td>${se.toFixed(2)}</td></tr>
-            `;
-            document.getElementById(config.id).innerHTML = html;
-        });
-        document.getElementById('resultsSection').style.display = 'block';
-
-        // 3. Dependent T-Test Stats
-        const differences = [];
-        for(let i=0; i < preData.length; i++) {
-            differences.push(postData[i] - preData[i]);
-        }
-
-        const n = differences.length;
-        const meanDiff = getMean(differences);
-        const stdDevDiff = getStdDev(differences, meanDiff);
-        const stdErrorDiff = stdDevDiff / Math.sqrt(n); 
-        const tStat = meanDiff / stdErrorDiff;
-        const df = n - 1;
-        
-        // P-Value & CI
-        let pValue = calculateTTestPValue(tStat, df);
-        if (pValue < 1e-10) pValue = 0; 
-
-        const alpha = 0.05;
-        const tCritical = getCriticalT(df, alpha); 
-        const marginOfError = tCritical * stdErrorDiff;
-        const lowerCI = meanDiff - marginOfError;
-        const upperCI = meanDiff + marginOfError;
-
-        document.getElementById('meanDiff').innerText = meanDiff.toFixed(4);
-        document.getElementById('stdDevDiff').innerText = stdDevDiff.toFixed(4);
-        document.getElementById('stdErrorDiff').innerText = stdErrorDiff.toFixed(4);
-        document.getElementById('dfVal').innerText = df;
-        
-        document.getElementById('ciLower').innerText = lowerCI.toFixed(4);
-        document.getElementById('ciUpper').innerText = upperCI.toFixed(4);
-        
-        const tStatCell = document.getElementById('tStat');
-        tStatCell.innerText = tStat.toFixed(4);
-        tStatCell.style.color = tStat > 0 ? 'var(--success)' : (tStat < 0 ? 'var(--danger)' : 'inherit');
-
-        const pValueDisplay = pValue < 0.0001 ? "< 0.0001" : pValue.toFixed(4);
-        const pValueCell = document.getElementById('pValue');
-        pValueCell.innerText = pValueDisplay;
-       
-        // Interpretation
-        const interpBox = document.getElementById('interpretationBox');
-        let interpretation = "";
-
-        if (pValue < alpha) {
-            pValueCell.style.color = "var(--success)";
-            interpBox.style.borderColor = "var(--success)";
-            interpBox.style.background = "#f0fdf4";
-            interpretation = `
-                <strong>Statistically Significant:</strong> P-value (${pValueDisplay}) < 0.05.
-                <br>We can be 95% confident that the true difference between the means lies between <strong>${lowerCI.toFixed(2)}</strong> and <strong>${upperCI.toFixed(2)}</strong>.
-                <br>Because this interval does not include zero, the result is significant.
-            `;
+        if (stage.erupting) {
+            magmaPath.classList.add('active-magma');
+            magmaPath.classList.add('erupting');
+        } else if (index === 2 || index === 3) { 
+             magmaPath.classList.add('active-magma');
+             magmaPath.classList.remove('erupting');
         } else {
-            pValueCell.style.color = "var(--danger)";
-            interpBox.style.borderColor = "var(--danger)";
-            interpBox.style.background = "#fef2f2";
-            interpretation = `
-                <strong>Not Significant:</strong> P-value (${pValueDisplay}) > 0.05.
-                <br>The 95% Confidence Interval is from <strong>${lowerCI.toFixed(2)}</strong> to <strong>${upperCI.toFixed(2)}</strong>.
-                <br>Because this interval includes zero, we cannot rule out the possibility that there is no difference.
-            `;
+            magmaPath.classList.remove('active-magma');
+            magmaPath.classList.remove('erupting');
         }
-        document.getElementById('interpretation').innerHTML = interpretation;
-        document.getElementById('ttestSection').style.display = 'block';
-    }
 
-    // --- CHART 1: Slope Chart (Individuals) ---
-    function renderSlopeChart(preData, postData, meanPre, meanPost) {
-        const ctx = document.getElementById('slopeChart').getContext('2d');
-        if (slopeChartInstance) slopeChartInstance.destroy();
+        vizLabel.textContent = stage.label;
+        vizLabel.style.opacity = 1;
+        setTimeout(() => { vizLabel.style.opacity = 0.8; }, 1000);
 
-        const individualDatasets = preData.map((preVal, index) => ({
-            label: `P${index + 1}`,
-            data: [preVal, postData[index]],
-            borderColor: 'rgba(150, 150, 150, 0.2)',
-            borderWidth: 2,
-            tension: 0,
-            pointRadius: 3,
-            fill: false
-        }));
+        uiTitle.textContent = stage.title;
+        uiDuration.textContent = stage.duration;
+        uiDesc.textContent = stage.desc;
+        uiExample.textContent = stage.example;
 
-        const averageDataset = {
-            label: 'AVERAGE',
-            data: [meanPre, meanPost],
-            borderColor: '#2563eb',
-            backgroundColor: '#2563eb',
-            borderWidth: 5,
-            tension: 0,
-            pointRadius: 6,
-            fill: false
-        };
-
-        slopeChartInstance = new Chart(ctx, {
-            type: 'line',
-            data: { labels: ['Pre-Test', 'Post-Test'], datasets: [...individualDatasets, averageDataset] },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    title: { display: true, text: 'Individual Score Changes (Slope)' },
-                    legend: { labels: { filter: i => i.text === 'AVERAGE', font: { weight: 'bold' } } }
-                },
-                scales: { 
-                    y: { beginAtZero: false, title: { display: true, text: 'Score' } },
-                    x: { offset: true } // Keeps points away from edges
-                }
-            }
+        uiFeatures.innerHTML = '';
+        stage.features.forEach(feat => {
+            const li = document.createElement('li');
+            li.textContent = feat;
+            uiFeatures.appendChild(li);
         });
     }
 
-    // --- CHART 2: Bar Chart (Means) ---
-    function renderBarChart(meanPre, meanPost) {
-        const ctx = document.getElementById('barChart').getContext('2d');
-        if (barChartInstance) barChartInstance.destroy();
+    setStage(0);
 
-        barChartInstance = new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: ['Pre-Test Mean', 'Post-Test Mean'],
-                datasets: [{
-                    label: 'Mean Score',
-                    data: [meanPre, meanPost],
-                    backgroundColor: ['#94a3b8', '#2563eb'], // Grey for Pre, Blue for Post
-                    borderColor: ['#64748b', '#1d4ed8'],
-                    borderWidth: 1
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    title: { display: true, text: 'Average Score Comparison' },
-                    legend: { display: false },
-                    tooltip: {
-                         callbacks: {
-                            label: function(context) {
-                                return `Mean: ${context.parsed.y.toFixed(2)}`;
-                            }
-                        }
-                    }
-                },
-                scales: {
-                    y: { 
-                        beginAtZero: true, 
-                        title: { display: true, text: 'Mean Score' } 
-                    }
-                }
-            }
-        });
-    }
-
-    window.onload = populateFakeData;
 </script>
 
 </body>
