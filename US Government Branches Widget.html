@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Three Branches of Government - Interactive Widget</title>
+  <style>
+    :root {
+      --executive: #ff8a5b;
+      --legislative: #56ccf2;
+      --judicial: #9b7cff;
+      --ink: #22324a;
+      --bg: #f4f8ff;
+      --card: #ffffff;
+      --shadow: 0 10px 30px rgba(34, 50, 74, 0.15);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: "Segoe UI", "Trebuchet MS", sans-serif;
+      background: radial-gradient(circle at top, #ffffff 0%, var(--bg) 45%, #e7efff 100%);
+      color: var(--ink);
+      padding: 24px;
+      display: flex;
+      justify-content: center;
+    }
+
+    .widget {
+      width: min(980px, 100%);
+      background: var(--card);
+      border-radius: 24px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      display: grid;
+      grid-template-columns: 1.1fr 0.9fr;
+    }
+
+    header {
+      grid-column: 1 / -1;
+      padding: 24px 28px 12px;
+      background: linear-gradient(120deg, #fdf2f8 0%, #eef6ff 65%, #f3f7ff 100%);
+      border-bottom: 1px solid #e7ebf5;
+    }
+
+    header h1 {
+      margin: 0 0 8px;
+      font-size: clamp(1.6rem, 2.4vw, 2.4rem);
+    }
+
+    header p {
+      margin: 0;
+      font-size: 1.05rem;
+      max-width: 680px;
+    }
+
+    .controls {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-top: 16px;
+    }
+
+    .sound-toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      background: #fff;
+      border-radius: 999px;
+      padding: 8px 14px;
+      border: 2px solid #d7e1f5;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.2s ease, border-color 0.2s ease;
+    }
+
+    .sound-toggle:hover {
+      transform: translateY(-2px);
+      border-color: #9db3ff;
+    }
+
+    .sound-dot {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: #22c55e;
+      box-shadow: 0 0 8px rgba(34, 197, 94, 0.6);
+    }
+
+    .sound-off {
+      background: #f87171;
+      box-shadow: 0 0 8px rgba(248, 113, 113, 0.6);
+    }
+
+    .branch-panel {
+      padding: 28px;
+      display: grid;
+      gap: 20px;
+    }
+
+    .branch-grid {
+      display: grid;
+      gap: 16px;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    }
+
+    .branch-card {
+      border-radius: 18px;
+      padding: 16px;
+      border: 2px solid transparent;
+      background: #fdfcff;
+      display: grid;
+      gap: 10px;
+      cursor: pointer;
+      transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+    }
+
+    .branch-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 8px 20px rgba(34, 50, 74, 0.12);
+    }
+
+    .branch-card.active {
+      border-color: currentColor;
+      box-shadow: 0 10px 24px rgba(34, 50, 74, 0.2);
+    }
+
+    .branch-card h3 {
+      margin: 0;
+      font-size: 1.2rem;
+    }
+
+    .branch-card p {
+      margin: 0;
+      font-size: 0.95rem;
+      line-height: 1.4;
+    }
+
+    .branch-icon {
+      font-size: 2rem;
+    }
+
+    .detail-card {
+      background: #f7faff;
+      border-radius: 20px;
+      padding: 20px;
+      border: 2px dashed #c9d8ff;
+    }
+
+    .detail-card h2 {
+      margin-top: 0;
+      font-size: 1.4rem;
+    }
+
+    .detail-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 12px;
+      border-radius: 999px;
+      font-weight: 600;
+      background: #fff;
+      border: 1px solid #d8e4ff;
+      margin-bottom: 10px;
+    }
+
+    .quiz-panel {
+      padding: 28px 28px 32px;
+      background: #fefcff;
+      border-left: 1px solid #eef1fb;
+      display: grid;
+      gap: 18px;
+    }
+
+    .quiz-panel h2 {
+      margin: 0;
+      font-size: 1.4rem;
+    }
+
+    .quiz-card {
+      background: #ffffff;
+      border-radius: 18px;
+      padding: 16px;
+      border: 2px solid #e8eefc;
+      display: grid;
+      gap: 10px;
+    }
+
+    .quiz-options {
+      display: grid;
+      gap: 8px;
+    }
+
+    .quiz-button {
+      padding: 10px 12px;
+      border-radius: 12px;
+      border: 2px solid transparent;
+      background: #f4f7ff;
+      cursor: pointer;
+      font-weight: 600;
+      transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+    }
+
+    .quiz-button:hover {
+      transform: translateY(-2px);
+    }
+
+    .quiz-button.correct {
+      border-color: #22c55e;
+      background: #e9f9f0;
+      color: #166534;
+    }
+
+    .quiz-button.incorrect {
+      border-color: #f87171;
+      background: #fff1f2;
+      color: #991b1b;
+    }
+
+    .score-card {
+      border-radius: 16px;
+      padding: 12px 16px;
+      background: #f0f9ff;
+      border: 2px solid #d3e9ff;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .score-card span {
+      font-size: 1.4rem;
+      color: #1d4ed8;
+    }
+
+    .checklist {
+      display: grid;
+      gap: 6px;
+      margin: 0;
+      padding-left: 18px;
+    }
+
+    .tip {
+      font-size: 0.95rem;
+      padding: 10px 12px;
+      background: #fff9e6;
+      border-radius: 12px;
+      border: 1px solid #ffe7ad;
+    }
+
+    @media (max-width: 900px) {
+      .widget {
+        grid-template-columns: 1fr;
+      }
+
+      .quiz-panel {
+        border-left: none;
+        border-top: 1px solid #eef1fb;
+      }
+    }
+  </style>
+</head>
+<body>
+  <section class="widget" aria-label="Three branches of the U.S. Government interactive widget">
+    <header>
+      <h1>Meet the Three Branches of the U.S. Government</h1>
+      <p>
+        Tap a branch to explore its job, leaders, and superpowers. Then try the quick quiz to hear sound effects and see
+        how many you can match correctly!
+      </p>
+      <div class="controls">
+        <button class="sound-toggle" id="soundToggle" type="button">
+          <span class="sound-dot" id="soundDot" aria-hidden="true"></span>
+          Sound: <span id="soundLabel">On</span>
+        </button>
+      </div>
+    </header>
+
+    <div class="branch-panel">
+      <div class="branch-grid" role="tablist" aria-label="Branch selector">
+        <button class="branch-card active" data-branch="executive" style="color: var(--executive);" role="tab" aria-selected="true">
+          <span class="branch-icon">🏛️</span>
+          <h3>Executive</h3>
+          <p>Leads the country and makes sure laws are carried out.</p>
+        </button>
+        <button class="branch-card" data-branch="legislative" style="color: var(--legislative);" role="tab" aria-selected="false">
+          <span class="branch-icon">🗳️</span>
+          <h3>Legislative</h3>
+          <p>Writes and votes on laws.</p>
+        </button>
+        <button class="branch-card" data-branch="judicial" style="color: var(--judicial);" role="tab" aria-selected="false">
+          <span class="branch-icon">⚖️</span>
+          <h3>Judicial</h3>
+          <p>Interprets laws and decides if they are fair.</p>
+        </button>
+      </div>
+
+      <article class="detail-card" id="detailCard" aria-live="polite">
+        <span class="detail-pill" id="detailPill">Executive Branch</span>
+        <h2 id="detailTitle">Leads and carries out the laws</h2>
+        <p id="detailDescription">
+          The Executive Branch includes the President, Vice President, and Cabinet. They run the government day-to-day and
+          take action when Congress passes a law.
+        </p>
+        <h3>Power Moves</h3>
+        <ul class="checklist" id="detailList">
+          <li>Signs bills into law or vetoes them.</li>
+          <li>Commands the armed forces.</li>
+          <li>Appoints leaders like ambassadors.</li>
+        </ul>
+      </article>
+
+      <p class="tip">💡 Tip: Each branch keeps the others in check, so no one gets too powerful!</p>
+    </div>
+
+    <aside class="quiz-panel">
+      <h2>Quick Match Quiz 🎧</h2>
+      <p>Choose the branch that fits each job. You get a sound for every choice!</p>
+
+      <div class="quiz-card" data-answer="executive">
+        <strong>1. Who can sign or veto a bill?</strong>
+        <div class="quiz-options">
+          <button class="quiz-button" type="button">Executive</button>
+          <button class="quiz-button" type="button">Legislative</button>
+          <button class="quiz-button" type="button">Judicial</button>
+        </div>
+      </div>
+
+      <div class="quiz-card" data-answer="legislative">
+        <strong>2. Who writes the laws?</strong>
+        <div class="quiz-options">
+          <button class="quiz-button" type="button">Executive</button>
+          <button class="quiz-button" type="button">Legislative</button>
+          <button class="quiz-button" type="button">Judicial</button>
+        </div>
+      </div>
+
+      <div class="quiz-card" data-answer="judicial">
+        <strong>3. Who decides if a law is fair?</strong>
+        <div class="quiz-options">
+          <button class="quiz-button" type="button">Executive</button>
+          <button class="quiz-button" type="button">Legislative</button>
+          <button class="quiz-button" type="button">Judicial</button>
+        </div>
+      </div>
+
+      <div class="score-card" aria-live="polite">
+        Quiz Score: <span id="score">0 / 3</span>
+      </div>
+    </aside>
+  </section>
+
+  <script>
+    const branchData = {
+      executive: {
+        pill: "Executive Branch",
+        title: "Leads and carries out the laws",
+        description:
+          "The Executive Branch includes the President, Vice President, and Cabinet. They run the government day-to-day and take action when Congress passes a law.",
+        list: [
+          "Signs bills into law or vetoes them.",
+          "Commands the armed forces.",
+          "Appoints leaders like ambassadors."
+        ],
+        color: "var(--executive)"
+      },
+      legislative: {
+        pill: "Legislative Branch",
+        title: "Writes and votes on the laws",
+        description:
+          "The Legislative Branch is Congress: the Senate and the House of Representatives. They propose and vote on new laws.",
+        list: [
+          "Introduces and debates bills.",
+          "Votes to approve laws.",
+          "Checks the President through impeachment."
+        ],
+        color: "var(--legislative)"
+      },
+      judicial: {
+        pill: "Judicial Branch",
+        title: "Interprets the laws",
+        description:
+          "The Judicial Branch includes the Supreme Court and other courts. Judges decide if laws follow the Constitution.",
+        list: [
+          "Explains what laws mean.",
+          "Decides if laws are constitutional.",
+          "Solves disagreements between states."
+        ],
+        color: "var(--judicial)"
+      }
+    };
+
+    const branchButtons = document.querySelectorAll(".branch-card");
+    const detailPill = document.getElementById("detailPill");
+    const detailTitle = document.getElementById("detailTitle");
+    const detailDescription = document.getElementById("detailDescription");
+    const detailList = document.getElementById("detailList");
+
+    const soundToggle = document.getElementById("soundToggle");
+    const soundDot = document.getElementById("soundDot");
+    const soundLabel = document.getElementById("soundLabel");
+
+    let soundOn = true;
+
+    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+
+    const playTone = (frequency, duration, type = "sine") => {
+      if (!soundOn) return;
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+      oscillator.type = type;
+      oscillator.frequency.value = frequency;
+      gainNode.gain.value = 0.15;
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+      oscillator.start();
+      gainNode.gain.exponentialRampToValueAtTime(0.0001, audioContext.currentTime + duration);
+      oscillator.stop(audioContext.currentTime + duration);
+    };
+
+    const playBranchSound = (branch) => {
+      const sounds = {
+        executive: [440, 0.25, "triangle"],
+        legislative: [523.25, 0.25, "square"],
+        judicial: [392, 0.3, "sine"]
+      };
+      const [frequency, duration, type] = sounds[branch];
+      playTone(frequency, duration, type);
+    };
+
+    const renderBranch = (branch) => {
+      const data = branchData[branch];
+      detailPill.textContent = data.pill;
+      detailPill.style.borderColor = data.color;
+      detailPill.style.color = data.color;
+      detailTitle.textContent = data.title;
+      detailDescription.textContent = data.description;
+      detailList.innerHTML = "";
+      data.list.forEach((item) => {
+        const li = document.createElement("li");
+        li.textContent = item;
+        detailList.appendChild(li);
+      });
+    };
+
+    branchButtons.forEach((button) => {
+      button.addEventListener("click", () => {
+        branchButtons.forEach((btn) => {
+          btn.classList.remove("active");
+          btn.setAttribute("aria-selected", "false");
+        });
+        button.classList.add("active");
+        button.setAttribute("aria-selected", "true");
+        const branch = button.dataset.branch;
+        renderBranch(branch);
+        playBranchSound(branch);
+      });
+    });
+
+    soundToggle.addEventListener("click", () => {
+      soundOn = !soundOn;
+      soundLabel.textContent = soundOn ? "On" : "Off";
+      soundDot.classList.toggle("sound-off", !soundOn);
+      if (soundOn) {
+        playTone(660, 0.15, "sine");
+      }
+    });
+
+    const quizCards = document.querySelectorAll(".quiz-card");
+    const scoreDisplay = document.getElementById("score");
+    let score = 0;
+
+    quizCards.forEach((card) => {
+      const correctAnswer = card.dataset.answer;
+      const buttons = card.querySelectorAll(".quiz-button");
+
+      buttons.forEach((button) => {
+        button.addEventListener("click", () => {
+          if (button.classList.contains("correct") || button.classList.contains("incorrect")) {
+            return;
+          }
+          const answerText = button.textContent.trim().toLowerCase();
+          const isCorrect = answerText === correctAnswer;
+          button.classList.add(isCorrect ? "correct" : "incorrect");
+
+          if (isCorrect) {
+            score += 1;
+            playTone(784, 0.2, "triangle");
+          } else {
+            playTone(196, 0.35, "sawtooth");
+          }
+
+          scoreDisplay.textContent = `${score} / 3`;
+        });
+      });
+    });
+
+    renderBranch("executive");
+  </script>
+</body>
+</html>
