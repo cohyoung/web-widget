@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Single-Case Research Design Graph</title>
+    <style>
+        :root {
+            --bg: #f6f7fb;
+            --panel: #ffffff;
+            --primary: #1b4b7a;
+            --accent: #f2994a;
+            --border: #e2e6ef;
+            --text: #1f2937;
+            --muted: #6b7280;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+        }
+
+        header {
+            background: var(--primary);
+            color: white;
+            padding: 18px 28px;
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 1.4rem;
+        }
+
+        header p {
+            margin: 4px 0 0;
+            font-size: 0.95rem;
+            opacity: 0.85;
+        }
+
+        .layout {
+            display: grid;
+            grid-template-columns: 340px 1fr;
+            gap: 20px;
+            padding: 20px 28px 28px;
+        }
+
+        .panel {
+            background: var(--panel);
+            border-radius: 12px;
+            box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+            padding: 18px;
+        }
+
+        .panel h2 {
+            margin-top: 0;
+            font-size: 1.1rem;
+        }
+
+        .field {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            margin-bottom: 14px;
+        }
+
+        label {
+            font-size: 0.85rem;
+            color: var(--muted);
+        }
+
+        input[type="text"],
+        input[type="number"] {
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 8px 10px;
+            font-size: 0.95rem;
+        }
+
+        input[type="number"] {
+            width: 100%;
+        }
+
+        .toggle {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.9rem;
+        }
+
+        .phase-card {
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 12px;
+            margin-bottom: 12px;
+        }
+
+        .phase-card header {
+            background: none;
+            color: inherit;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .phase-card header h3 {
+            margin: 0;
+            font-size: 1rem;
+        }
+
+        .phase-card button {
+            border: none;
+            background: none;
+            color: var(--accent);
+            cursor: pointer;
+            font-size: 0.85rem;
+        }
+
+        .btn {
+            border: none;
+            background: var(--accent);
+            color: white;
+            padding: 10px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        .btn.secondary {
+            background: #e7ecf5;
+            color: var(--primary);
+        }
+
+        .btn-row {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .graph-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .graph-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .graph-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        .svg-wrap {
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 10px;
+            background: white;
+            min-height: 420px;
+        }
+
+        svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        .axis {
+            stroke: #94a3b8;
+            stroke-width: 1;
+        }
+
+        .grid {
+            stroke: #e2e8f0;
+            stroke-width: 1;
+        }
+
+        .phase-divider {
+            stroke: #cbd5f5;
+            stroke-width: 2;
+            stroke-dasharray: 4 4;
+        }
+
+        .phase-label {
+            font-size: 12px;
+            fill: var(--primary);
+            font-weight: 600;
+        }
+
+        .data-line {
+            fill: none;
+            stroke: var(--accent);
+            stroke-width: 2.5;
+        }
+
+        .data-point {
+            fill: var(--primary);
+        }
+
+        .note {
+            font-size: 0.85rem;
+            color: var(--muted);
+        }
+
+        @media (max-width: 960px) {
+            .layout {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Single-Case Research Design Graph</h1>
+        <p>Create and export a clean AB/ABC-style graph for behavioral research.</p>
+    </header>
+
+    <main class="layout">
+        <section class="panel" aria-label="Graph controls">
+            <h2>Data Inputs</h2>
+
+            <div class="field">
+                <label for="graphTitle">Graph title</label>
+                <input id="graphTitle" type="text" value="On-task Behavior" />
+            </div>
+
+            <div class="field">
+                <label for="yLabel">Y-axis label</label>
+                <input id="yLabel" type="text" value="% of intervals" />
+            </div>
+
+            <div class="field">
+                <label for="xLabel">X-axis label</label>
+                <input id="xLabel" type="text" value="Sessions" />
+            </div>
+
+            <div class="field toggle">
+                <input id="autoScale" type="checkbox" checked />
+                <label for="autoScale">Auto-scale Y-axis</label>
+            </div>
+
+            <div class="field">
+                <label for="yMin">Y-axis minimum</label>
+                <input id="yMin" type="number" value="0" />
+            </div>
+
+            <div class="field">
+                <label for="yMax">Y-axis maximum</label>
+                <input id="yMax" type="number" value="100" />
+            </div>
+
+            <div id="phaseList"></div>
+
+            <div class="btn-row">
+                <button class="btn" id="addPhase">Add phase</button>
+                <button class="btn secondary" id="sampleData">Sample data</button>
+            </div>
+
+            <p class="note">Enter values as comma-separated numbers (e.g., 20, 30, 45). Phases can be renamed to A, B, C, etc.</p>
+        </section>
+
+        <section class="panel graph-panel" aria-label="Graph preview">
+            <div class="graph-header">
+                <div>
+                    <div class="graph-title" id="previewTitle">On-task Behavior</div>
+                    <div class="note" id="previewSubtitle">Single-case research design graph</div>
+                </div>
+                <button class="btn secondary" id="downloadSvg">Download SVG</button>
+            </div>
+
+            <div class="svg-wrap">
+                <svg id="graph" viewBox="0 0 840 420" role="img" aria-label="Single case graph"></svg>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        const phaseList = document.getElementById("phaseList");
+        const graphTitle = document.getElementById("graphTitle");
+        const yLabel = document.getElementById("yLabel");
+        const xLabel = document.getElementById("xLabel");
+        const autoScale = document.getElementById("autoScale");
+        const yMinInput = document.getElementById("yMin");
+        const yMaxInput = document.getElementById("yMax");
+        const previewTitle = document.getElementById("previewTitle");
+        const graph = document.getElementById("graph");
+
+        let phases = [
+            { name: "A", label: "Baseline", values: "35, 40, 38, 45, 42" },
+            { name: "B", label: "Intervention", values: "50, 55, 60, 58, 65, 70" }
+        ];
+
+        const samplePhases = [
+            { name: "A", label: "Baseline", values: "20, 22, 18, 25, 21" },
+            { name: "B", label: "Intervention", values: "30, 35, 40, 38, 45" },
+            { name: "C", label: "Generalization", values: "42, 48, 50, 55" }
+        ];
+
+        function parseValues(valueString) {
+            return valueString
+                .split(",")
+                .map(item => Number(item.trim()))
+                .filter(num => !Number.isNaN(num));
+        }
+
+        function renderPhaseInputs() {
+            phaseList.innerHTML = "";
+            phases.forEach((phase, index) => {
+                const card = document.createElement("div");
+                card.className = "phase-card";
+
+                const header = document.createElement("header");
+                const title = document.createElement("h3");
+                title.textContent = `Phase ${phase.name}`;
+                const removeBtn = document.createElement("button");
+                removeBtn.textContent = "Remove";
+                removeBtn.type = "button";
+                removeBtn.addEventListener("click", () => {
+                    phases.splice(index, 1);
+                    renderPhaseInputs();
+                    renderGraph();
+                });
+
+                header.appendChild(title);
+                if (phases.length > 1) {
+                    header.appendChild(removeBtn);
+                }
+
+                const nameField = document.createElement("div");
+                nameField.className = "field";
+                const nameLabel = document.createElement("label");
+                nameLabel.textContent = "Phase code";
+                const nameInput = document.createElement("input");
+                nameInput.type = "text";
+                nameInput.value = phase.name;
+                nameInput.addEventListener("input", (event) => {
+                    phases[index].name = event.target.value || "";
+                    renderGraph();
+                });
+
+                nameField.appendChild(nameLabel);
+                nameField.appendChild(nameInput);
+
+                const labelField = document.createElement("div");
+                labelField.className = "field";
+                const labelLabel = document.createElement("label");
+                labelLabel.textContent = "Phase label";
+                const labelInput = document.createElement("input");
+                labelInput.type = "text";
+                labelInput.value = phase.label;
+                labelInput.addEventListener("input", (event) => {
+                    phases[index].label = event.target.value;
+                    renderGraph();
+                });
+
+                labelField.appendChild(labelLabel);
+                labelField.appendChild(labelInput);
+
+                const valuesField = document.createElement("div");
+                valuesField.className = "field";
+                const valuesLabel = document.createElement("label");
+                valuesLabel.textContent = "Data values";
+                const valuesInput = document.createElement("input");
+                valuesInput.type = "text";
+                valuesInput.value = phase.values;
+                valuesInput.addEventListener("input", (event) => {
+                    phases[index].values = event.target.value;
+                    renderGraph();
+                });
+
+                valuesField.appendChild(valuesLabel);
+                valuesField.appendChild(valuesInput);
+
+                card.appendChild(header);
+                card.appendChild(nameField);
+                card.appendChild(labelField);
+                card.appendChild(valuesField);
+                phaseList.appendChild(card);
+            });
+        }
+
+        function renderGraph() {
+            const values = phases.flatMap(phase => parseValues(phase.values));
+            const maxValue = Math.max(...values, 0);
+            const minValue = Math.min(...values, 0);
+
+            const auto = autoScale.checked;
+            let yMin = auto ? Math.floor(minValue / 5) * 5 : Number(yMinInput.value);
+            let yMax = auto ? Math.ceil(maxValue / 5) * 5 : Number(yMaxInput.value);
+            if (yMin === yMax) {
+                yMax = yMin + 10;
+            }
+
+            const width = 840;
+            const height = 420;
+            const padding = { top: 40, right: 30, bottom: 60, left: 60 };
+            const plotWidth = width - padding.left - padding.right;
+            const plotHeight = height - padding.top - padding.bottom;
+
+            const totalPoints = phases.reduce((sum, phase) => sum + parseValues(phase.values).length, 0);
+            const xStep = totalPoints > 1 ? plotWidth / (totalPoints - 1) : plotWidth;
+
+            const yScale = (value) => {
+                const normalized = (value - yMin) / (yMax - yMin || 1);
+                return padding.top + plotHeight - normalized * plotHeight;
+            };
+
+            const svgParts = [];
+            svgParts.push(`<rect x="${padding.left}" y="${padding.top}" width="${plotWidth}" height="${plotHeight}" fill="#fff" />`);
+
+            const gridLines = 5;
+            for (let i = 0; i <= gridLines; i++) {
+                const y = padding.top + (plotHeight / gridLines) * i;
+                const value = yMax - ((yMax - yMin) / gridLines) * i;
+                svgParts.push(`<line class="grid" x1="${padding.left}" y1="${y}" x2="${width - padding.right}" y2="${y}" />`);
+                svgParts.push(`<text x="${padding.left - 10}" y="${y + 4}" font-size="12" text-anchor="end" fill="#64748b">${value.toFixed(0)}</text>`);
+            }
+
+            svgParts.push(`<line class="axis" x1="${padding.left}" y1="${padding.top}" x2="${padding.left}" y2="${height - padding.bottom}" />`);
+            svgParts.push(`<line class="axis" x1="${padding.left}" y1="${height - padding.bottom}" x2="${width - padding.right}" y2="${height - padding.bottom}" />`);
+
+            svgParts.push(`<text x="${width / 2}" y="${height - 15}" text-anchor="middle" font-size="13" fill="#1f2937">${xLabel.value}</text>`);
+            svgParts.push(`<text x="15" y="${height / 2}" text-anchor="middle" font-size="13" fill="#1f2937" transform="rotate(-90 15 ${height / 2})">${yLabel.value}</text>`);
+
+            let pointIndex = 0;
+            phases.forEach((phase, phaseIndex) => {
+                const phaseValues = parseValues(phase.values);
+                if (phaseValues.length === 0) {
+                    return;
+                }
+
+                if (phaseIndex > 0) {
+                    const dividerX = padding.left + (pointIndex - 0.5) * xStep;
+                    svgParts.push(`<line class="phase-divider" x1="${dividerX}" y1="${padding.top}" x2="${dividerX}" y2="${height - padding.bottom}" />`);
+                }
+
+                const labelX = padding.left + pointIndex * xStep + ((phaseValues.length - 1) * xStep) / 2;
+                svgParts.push(`<text class="phase-label" x="${labelX}" y="${padding.top - 12}" text-anchor="middle">${phase.name}: ${phase.label}</text>`);
+
+                let path = "";
+                phaseValues.forEach((value, idx) => {
+                    const x = padding.left + (pointIndex + idx) * xStep;
+                    const y = yScale(value);
+                    path += `${idx === 0 ? "M" : "L"}${x},${y} `;
+                    svgParts.push(`<circle class="data-point" cx="${x}" cy="${y}" r="4" />`);
+                });
+
+                svgParts.push(`<path class="data-line" d="${path}" />`);
+                pointIndex += phaseValues.length;
+            });
+
+            graph.innerHTML = svgParts.join("");
+            previewTitle.textContent = graphTitle.value || "Single-case Graph";
+        }
+
+        function bindInputs() {
+            [graphTitle, yLabel, xLabel, autoScale, yMinInput, yMaxInput].forEach(input => {
+                input.addEventListener("input", renderGraph);
+            });
+        }
+
+        document.getElementById("addPhase").addEventListener("click", () => {
+            phases.push({ name: "", label: "New phase", values: "" });
+            renderPhaseInputs();
+            renderGraph();
+        });
+
+        document.getElementById("sampleData").addEventListener("click", () => {
+            phases = samplePhases.map(phase => ({ ...phase }));
+            renderPhaseInputs();
+            renderGraph();
+        });
+
+        document.getElementById("downloadSvg").addEventListener("click", () => {
+            const svgBlob = new Blob([graph.outerHTML], { type: "image/svg+xml" });
+            const url = URL.createObjectURL(svgBlob);
+            const link = document.createElement("a");
+            link.href = url;
+            link.download = "single-case-graph.svg";
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            URL.revokeObjectURL(url);
+        });
+
+        bindInputs();
+        renderPhaseInputs();
+        renderGraph();
+    </script>
+</body>
+</html>
