@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Preschool Video Modeling Widget</title>
+  <style>
+    :root {
+      --bg: #f7f7fb;
+      --card: #ffffff;
+      --primary: #5b7cfa;
+      --primary-dark: #3e5fe2;
+      --accent: #f6c453;
+      --success: #36b37e;
+      --danger: #ea4d4d;
+      --text: #2c2f36;
+      --muted: #6b7280;
+      --border: #e5e7eb;
+      --shadow: 0 10px 30px rgba(20, 20, 43, 0.08);
+      --radius: 18px;
+      --radius-sm: 12px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: "Trebuchet MS", "Segoe UI", system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    header {
+      background: linear-gradient(120deg, #4f6ef5, #7b9cff);
+      color: white;
+      padding: 28px 20px;
+    }
+
+    header h1 {
+      margin: 0 0 6px;
+      font-size: 28px;
+      font-weight: 700;
+    }
+
+    header p {
+      margin: 0;
+      opacity: 0.9;
+      font-size: 15px;
+    }
+
+    main {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 24px 20px 36px;
+      display: grid;
+      grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.8fr);
+      gap: 22px;
+    }
+
+    @media (max-width: 980px) {
+      main {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .card {
+      background: var(--card);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 20px;
+      border: 1px solid var(--border);
+    }
+
+    .card h2 {
+      margin: 0 0 12px;
+      font-size: 20px;
+    }
+
+    .upload-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .upload-row input[type="file"] {
+      flex: 1;
+      padding: 10px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      background: #fbfbff;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: #eef2ff;
+      color: var(--primary-dark);
+      padding: 6px 12px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .video-shell {
+      background: #0f172a;
+      border-radius: var(--radius);
+      overflow: hidden;
+      position: relative;
+    }
+
+    video {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+
+    .timeline-note {
+      padding: 8px 12px;
+      background: #0f172a;
+      color: #e2e8f0;
+      font-size: 13px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .btn {
+      border: none;
+      border-radius: 12px;
+      padding: 10px 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+      font-size: 14px;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      justify-content: center;
+    }
+
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: white;
+      box-shadow: 0 8px 18px rgba(91, 124, 250, 0.25);
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      transform: translateY(-1px);
+      background: var(--primary-dark);
+    }
+
+    .btn-secondary {
+      background: #f3f4f6;
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+
+    .btn-success {
+      background: var(--success);
+      color: white;
+    }
+
+    .btn-danger {
+      background: var(--danger);
+      color: white;
+    }
+
+    .step-list {
+      display: grid;
+      gap: 14px;
+      margin-top: 12px;
+      max-height: 520px;
+      overflow-y: auto;
+      padding-right: 6px;
+    }
+
+    .step-card {
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 12px;
+      display: grid;
+      gap: 8px;
+      background: #fffdf5;
+    }
+
+    .step-card.active {
+      border-color: var(--primary);
+      box-shadow: 0 10px 24px rgba(91, 124, 250, 0.15);
+    }
+
+    .step-card img {
+      width: 100%;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: #f9fafb;
+    }
+
+    .step-card h3 {
+      margin: 0;
+      font-size: 16px;
+    }
+
+    .step-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .step-controls {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .form-grid {
+      display: grid;
+      gap: 12px;
+    }
+
+    .form-grid label {
+      font-size: 13px;
+      color: var(--muted);
+      font-weight: 600;
+    }
+
+    input[type="text"],
+    textarea,
+    select {
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      font-family: inherit;
+      background: #fbfbff;
+    }
+
+    textarea {
+      min-height: 90px;
+      resize: vertical;
+    }
+
+    .prompt-tags {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .tag {
+      background: #fff7e1;
+      border: 1px solid #fde7b1;
+      color: #8a5d00;
+      padding: 6px 10px;
+      border-radius: 10px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .info-box {
+      background: #eff6ff;
+      border: 1px dashed #c7d7ff;
+      border-radius: 14px;
+      padding: 14px;
+      font-size: 13px;
+      color: #274690;
+      line-height: 1.4;
+    }
+
+    .reward-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .reward-row button {
+      flex: 1;
+      min-width: 120px;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--muted);
+    }
+
+    .empty-state span {
+      display: inline-block;
+      font-size: 50px;
+      margin-bottom: 12px;
+    }
+
+    .floating-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 12px;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Preschool Video Modeling Widget</h1>
+    <p>Build a joyful, step-by-step video model with prompts and reinforcement ideas for young learners.</p>
+  </header>
+
+  <main>
+    <section class="card">
+      <h2>1. Upload a video</h2>
+      <div class="upload-row">
+        <input id="videoUpload" type="file" accept="video/*" />
+        <span class="pill">🎥 Classroom-friendly</span>
+        <span class="pill">🧸 Short & simple</span>
+      </div>
+      <p class="info-box" style="margin-top: 12px;">
+        Tip: Use a short clip (30-90 seconds) showing the skill. Pause at natural moments to capture steps.
+      </p>
+
+      <div style="margin-top: 18px;">
+        <div class="video-shell">
+          <video id="modelVideo" controls></video>
+        </div>
+        <div class="timeline-note">
+          <span id="timeLabel">00:00</span>
+          <span>Press “Capture Step” at the moment you want children to notice.</span>
+        </div>
+      </div>
+
+      <div class="floating-actions">
+        <button class="btn btn-primary" id="captureBtn" disabled>📸 Capture Step</button>
+        <button class="btn btn-secondary" id="playPauseBtn" disabled>▶️ Play/Pause</button>
+        <button class="btn btn-secondary" id="restartBtn" disabled>⏮️ Restart</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>2. Step Builder</h2>
+      <div id="stepForm" class="form-grid" style="display: none;">
+        <div>
+          <label for="stepTitle">Step title</label>
+          <input id="stepTitle" type="text" placeholder="e.g., Wash hands with soap" />
+        </div>
+        <div>
+          <label for="stepPrompt">Adult prompt (what you say)</label>
+          <input id="stepPrompt" type="text" placeholder="Try: “We rub our hands together!”" />
+        </div>
+        <div>
+          <label for="stepNote">Child-friendly note</label>
+          <textarea id="stepNote" placeholder="Describe what the child should notice in the video."></textarea>
+        </div>
+        <div>
+          <label for="stepSupport">Prompt level</label>
+          <select id="stepSupport">
+            <option value="gesture">Gesture prompt</option>
+            <option value="verbal">Verbal prompt</option>
+            <option value="model">Model prompt</option>
+            <option value="physical">Physical prompt</option>
+          </select>
+        </div>
+        <div>
+          <label>Reinforcement idea</label>
+          <div class="reward-row">
+            <button class="btn btn-success" type="button" data-reward="High five!">🙌 High five</button>
+            <button class="btn btn-success" type="button" data-reward="Sticker time!">⭐ Sticker</button>
+            <button class="btn btn-success" type="button" data-reward="Dance break!">🎉 Dance</button>
+          </div>
+          <input id="stepReward" type="text" placeholder="Or type your own reinforcement idea" />
+        </div>
+        <div class="prompt-tags">
+          <span class="tag">Short sentences</span>
+          <span class="tag">Show & tell</span>
+          <span class="tag">Praise quickly</span>
+        </div>
+      </div>
+
+      <div id="stepEmpty" class="empty-state">
+        <span>🧩</span>
+        <p>Capture a step to start building the model.</p>
+      </div>
+
+      <div class="step-list" id="stepList"></div>
+    </section>
+  </main>
+
+  <canvas id="captureCanvas" style="display: none;"></canvas>
+
+  <script>
+    const videoUpload = document.getElementById("videoUpload");
+    const modelVideo = document.getElementById("modelVideo");
+    const captureBtn = document.getElementById("captureBtn");
+    const playPauseBtn = document.getElementById("playPauseBtn");
+    const restartBtn = document.getElementById("restartBtn");
+    const timeLabel = document.getElementById("timeLabel");
+    const stepList = document.getElementById("stepList");
+    const stepForm = document.getElementById("stepForm");
+    const stepEmpty = document.getElementById("stepEmpty");
+    const captureCanvas = document.getElementById("captureCanvas");
+
+    const stepTitle = document.getElementById("stepTitle");
+    const stepPrompt = document.getElementById("stepPrompt");
+    const stepNote = document.getElementById("stepNote");
+    const stepSupport = document.getElementById("stepSupport");
+    const stepReward = document.getElementById("stepReward");
+
+    let steps = [];
+    let activeStepIndex = -1;
+
+    const formatTime = (seconds) => {
+      const minutes = Math.floor(seconds / 60);
+      const secs = Math.floor(seconds % 60);
+      return `${String(minutes).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
+    };
+
+    const toggleControls = (enabled) => {
+      [captureBtn, playPauseBtn, restartBtn].forEach((btn) => {
+        btn.disabled = !enabled;
+      });
+    };
+
+    const updateForm = () => {
+      if (activeStepIndex === -1) {
+        stepForm.style.display = "none";
+        stepEmpty.style.display = "block";
+        return;
+      }
+
+      stepForm.style.display = "grid";
+      stepEmpty.style.display = "none";
+      const step = steps[activeStepIndex];
+      stepTitle.value = step.title;
+      stepPrompt.value = step.prompt;
+      stepNote.value = step.note;
+      stepSupport.value = step.support;
+      stepReward.value = step.reward;
+    };
+
+    const renderSteps = () => {
+      stepList.innerHTML = "";
+      steps.forEach((step, index) => {
+        const card = document.createElement("article");
+        card.className = `step-card${index === activeStepIndex ? " active" : ""}`;
+        card.innerHTML = `
+          <img src="${step.thumbnail}" alt="Step screenshot ${index + 1}" />
+          <h3>${step.title}</h3>
+          <p style="margin: 0; font-size: 13px; color: var(--muted);">${step.note || "Add a child-friendly note."}</p>
+          <div class="step-meta">
+            <span>${formatTime(step.timestamp)}</span>
+            <span>${step.support} prompt</span>
+          </div>
+          <div class="step-controls">
+            <button class="btn btn-secondary" data-action="jump">⏯️ Go to moment</button>
+            <button class="btn btn-danger" data-action="delete">🗑️ Remove</button>
+          </div>
+        `;
+        card.querySelector('[data-action="jump"]').addEventListener("click", () => {
+          modelVideo.currentTime = step.timestamp;
+          modelVideo.play();
+        });
+        card.querySelector('[data-action="delete"]').addEventListener("click", () => {
+          steps.splice(index, 1);
+          if (activeStepIndex >= steps.length) {
+            activeStepIndex = steps.length - 1;
+          }
+          renderSteps();
+          updateForm();
+        });
+        card.addEventListener("click", (event) => {
+          if (event.target.tagName.toLowerCase() === "button") return;
+          activeStepIndex = index;
+          renderSteps();
+          updateForm();
+        });
+        stepList.appendChild(card);
+      });
+    };
+
+    const captureStep = () => {
+      if (!modelVideo.videoWidth) return;
+      const context = captureCanvas.getContext("2d");
+      captureCanvas.width = modelVideo.videoWidth;
+      captureCanvas.height = modelVideo.videoHeight;
+      context.drawImage(modelVideo, 0, 0, captureCanvas.width, captureCanvas.height);
+      const thumbnail = captureCanvas.toDataURL("image/png");
+
+      const step = {
+        title: `Step ${steps.length + 1}`,
+        prompt: "Try: “Watch me!”",
+        note: "",
+        support: "gesture",
+        reward: "",
+        timestamp: modelVideo.currentTime,
+        thumbnail,
+      };
+
+      steps.push(step);
+      activeStepIndex = steps.length - 1;
+      renderSteps();
+      updateForm();
+    };
+
+    const syncActiveStep = () => {
+      if (activeStepIndex === -1) return;
+      steps[activeStepIndex] = {
+        ...steps[activeStepIndex],
+        title: stepTitle.value.trim() || steps[activeStepIndex].title,
+        prompt: stepPrompt.value,
+        note: stepNote.value,
+        support: stepSupport.value,
+        reward: stepReward.value,
+      };
+      renderSteps();
+    };
+
+    videoUpload.addEventListener("change", (event) => {
+      const file = event.target.files[0];
+      if (!file) return;
+      modelVideo.src = URL.createObjectURL(file);
+      steps = [];
+      activeStepIndex = -1;
+      renderSteps();
+      updateForm();
+      toggleControls(true);
+    });
+
+    captureBtn.addEventListener("click", captureStep);
+    playPauseBtn.addEventListener("click", () => {
+      if (modelVideo.paused) {
+        modelVideo.play();
+      } else {
+        modelVideo.pause();
+      }
+    });
+    restartBtn.addEventListener("click", () => {
+      modelVideo.currentTime = 0;
+      modelVideo.pause();
+    });
+
+    modelVideo.addEventListener("timeupdate", () => {
+      timeLabel.textContent = formatTime(modelVideo.currentTime || 0);
+    });
+
+    [stepTitle, stepPrompt, stepNote, stepSupport, stepReward].forEach((input) => {
+      input.addEventListener("input", syncActiveStep);
+    });
+
+    document.querySelectorAll("[data-reward]").forEach((button) => {
+      button.addEventListener("click", () => {
+        stepReward.value = button.dataset.reward;
+        syncActiveStep();
+      });
+    });
+
+    toggleControls(false);
+  </script>
+</body>
+</html>
