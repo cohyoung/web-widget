@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Augmented Reality Storytime</title>
+    <style>
+        :root {
+            --sky: #cfe7ff;
+            --floor: #fbe7c6;
+            --accent: #ff6b6b;
+            --accent-dark: #d94b4b;
+            --leaf: #7bc96f;
+            --ocean: #63b3ed;
+            --shadow: rgba(0, 0, 0, 0.15);
+            --panel: #ffffff;
+            --ink: #2d3748;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+            background: #f4f6fb;
+            color: var(--ink);
+            display: flex;
+            justify-content: center;
+            padding: 24px;
+        }
+
+        .widget {
+            width: min(1100px, 100%);
+            background: var(--panel);
+            border-radius: 18px;
+            box-shadow: 0 18px 40px rgba(0, 0, 0, 0.15);
+            overflow: hidden;
+            display: grid;
+            grid-template-columns: minmax(320px, 1fr) minmax(320px, 1fr);
+        }
+
+        header {
+            grid-column: 1 / -1;
+            padding: 20px 28px;
+            background: linear-gradient(90deg, #ffe4d6, #ffd4f1);
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
+        header h1 {
+            font-size: 1.6rem;
+            margin: 0;
+        }
+
+        header p {
+            margin: 4px 0 0;
+            font-size: 0.95rem;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .button {
+            border: none;
+            background: var(--accent);
+            color: white;
+            padding: 10px 16px;
+            border-radius: 999px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s ease, background 0.2s ease;
+        }
+
+        .button.secondary {
+            background: #4a5568;
+        }
+
+        .button:active {
+            transform: scale(0.98);
+        }
+
+        .ar-view {
+            position: relative;
+            min-height: 420px;
+            background: linear-gradient(180deg, var(--sky) 0%, var(--sky) 55%, var(--floor) 55%, var(--floor) 100%);
+            overflow: hidden;
+            border-right: 1px solid #edf2f7;
+        }
+
+        .classroom {
+            position: absolute;
+            inset: 0;
+            padding: 24px;
+        }
+
+        .wall-decor {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
+        .poster {
+            width: 30%;
+            background: white;
+            border-radius: 12px;
+            padding: 12px;
+            box-shadow: 0 8px 18px var(--shadow);
+            text-align: center;
+            font-size: 0.75rem;
+        }
+
+        .rug {
+            position: absolute;
+            bottom: 32px;
+            left: 50%;
+            width: 70%;
+            height: 120px;
+            transform: translateX(-50%);
+            background: radial-gradient(circle at center, #ffd166 0%, #f4a261 70%);
+            border-radius: 60px;
+            box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .ar-overlay {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+        }
+
+        .scan-ring {
+            position: absolute;
+            top: 40px;
+            right: 40px;
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            border: 4px dashed #a0aec0;
+            opacity: 0;
+            transform: scale(0.7);
+            transition: opacity 0.3s ease, transform 0.3s ease;
+        }
+
+        .scan-active .scan-ring {
+            opacity: 1;
+            transform: scale(1);
+            animation: spin 6s linear infinite;
+        }
+
+        @keyframes spin {
+            from { transform: scale(1) rotate(0deg); }
+            to { transform: scale(1) rotate(360deg); }
+        }
+
+        .character {
+            position: absolute;
+            bottom: 120px;
+            left: 16%;
+            width: 120px;
+            text-align: center;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.4s ease, transform 0.4s ease;
+        }
+
+        .character.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .character .bubble {
+            background: white;
+            border-radius: 16px;
+            padding: 8px 12px;
+            font-size: 0.85rem;
+            box-shadow: 0 6px 16px var(--shadow);
+        }
+
+        .character .avatar {
+            margin: 8px auto 0;
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: var(--ocean);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.5rem;
+        }
+
+        .scene-object {
+            position: absolute;
+            bottom: 160px;
+            right: 18%;
+            width: 140px;
+            padding: 10px;
+            border-radius: 16px;
+            background: rgba(255, 255, 255, 0.9);
+            box-shadow: 0 10px 22px var(--shadow);
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.4s ease, transform 0.4s ease;
+        }
+
+        .scene-object.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .object-icon {
+            width: 64px;
+            height: 64px;
+            margin: 0 auto 6px;
+            border-radius: 16px;
+            background: var(--leaf);
+            display: grid;
+            place-items: center;
+            font-size: 2rem;
+        }
+
+        .story-panel {
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .step-card {
+            border-radius: 16px;
+            border: 2px solid #edf2f7;
+            padding: 14px 16px;
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+            transition: border 0.2s ease, background 0.2s ease;
+        }
+
+        .step-card.active {
+            border-color: var(--accent);
+            background: #fff5f5;
+        }
+
+        .step-number {
+            width: 36px;
+            height: 36px;
+            border-radius: 12px;
+            background: var(--accent);
+            color: white;
+            font-weight: bold;
+            display: grid;
+            place-items: center;
+        }
+
+        .step-details h3 {
+            margin: 0 0 6px;
+            font-size: 1rem;
+        }
+
+        .prompt {
+            background: #f7fafc;
+            border-radius: 12px;
+            padding: 12px 14px;
+            font-size: 0.9rem;
+        }
+
+        .teacher-tools {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 12px;
+        }
+
+        .tool {
+            background: #f7fafc;
+            border-radius: 14px;
+            padding: 12px;
+            font-size: 0.85rem;
+            text-align: center;
+        }
+
+        .progress {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.85rem;
+        }
+
+        .progress-bar {
+            flex: 1;
+            height: 10px;
+            background: #edf2f7;
+            border-radius: 999px;
+            margin: 0 12px;
+            overflow: hidden;
+        }
+
+        .progress-bar span {
+            display: block;
+            height: 100%;
+            background: var(--accent);
+            width: 0;
+            transition: width 0.4s ease;
+        }
+
+        @media (max-width: 900px) {
+            .widget {
+                grid-template-columns: 1fr;
+            }
+
+            .ar-view {
+                border-right: none;
+                border-bottom: 1px solid #edf2f7;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="widget">
+    <header>
+        <div>
+            <h1>Augmented Reality Storytime</h1>
+            <p>Turn the classroom rug into a magical forest for preschool storytellers.</p>
+        </div>
+        <div class="controls">
+            <button class="button" id="scan-btn">Scan the Rug</button>
+            <button class="button secondary" id="next-btn">Next Scene</button>
+        </div>
+    </header>
+
+    <section class="ar-view" id="ar-view">
+        <div class="classroom">
+            <div class="wall-decor">
+                <div class="poster">Today we notice shapes</div>
+                <div class="poster">Our story helpers</div>
+                <div class="poster">Count the sounds</div>
+            </div>
+            <div class="rug"></div>
+        </div>
+        <div class="ar-overlay" aria-live="polite">
+            <div class="scan-ring"></div>
+            <div class="character" id="character">
+                <div class="bubble" id="character-line">Hello, explorers!</div>
+                <div class="avatar" id="character-emoji">🦉</div>
+            </div>
+            <div class="scene-object" id="scene-object">
+                <div class="object-icon" id="object-emoji">🌳</div>
+                <div id="object-caption">A whispering tree appears.</div>
+            </div>
+        </div>
+    </section>
+
+    <section class="story-panel">
+        <div class="progress">
+            <span>Story path</span>
+            <div class="progress-bar"><span id="progress-fill"></span></div>
+            <span id="progress-label">Scene 1 of 4</span>
+        </div>
+
+        <div class="step-card active" data-step="0">
+            <div class="step-number">1</div>
+            <div class="step-details">
+                <h3>Meet the guide</h3>
+                <p>Use the tablet to scan the rug. The helper owl introduces the story.</p>
+            </div>
+        </div>
+        <div class="step-card" data-step="1">
+            <div class="step-number">2</div>
+            <div class="step-details">
+                <h3>Reveal the setting</h3>
+                <p>The forest tree appears. Invite students to touch the leaves and describe colors.</p>
+            </div>
+        </div>
+        <div class="step-card" data-step="2">
+            <div class="step-number">3</div>
+            <div class="step-details">
+                <h3>Problem moment</h3>
+                <p>A puddle blocks the path. Children help the characters choose a bridge.</p>
+            </div>
+        </div>
+        <div class="step-card" data-step="3">
+            <div class="step-number">4</div>
+            <div class="step-details">
+                <h3>Joyful ending</h3>
+                <p>A rainbow lights the rug. Celebrate with a simple movement dance.</p>
+            </div>
+        </div>
+
+        <div class="prompt" id="teacher-prompt">
+            Teacher prompt: Ask, “What do you notice in our AR forest?”
+        </div>
+
+        <div class="teacher-tools">
+            <div class="tool">Language: Name the shapes you see.</div>
+            <div class="tool">Math: Count the sparkle stars.</div>
+            <div class="tool">SEL: How does our owl feel?</div>
+            <div class="tool">Movement: Tiptoe through the trees.</div>
+        </div>
+    </section>
+</div>
+
+<script>
+    const scenes = [
+        {
+            character: "🦉",
+            line: "Hello, explorers! Ready for our forest story?",
+            object: "🌳",
+            caption: "A whispering tree appears.",
+            prompt: "Teacher prompt: Ask, “What do you notice in our AR forest?”"
+        },
+        {
+            character: "🐿️",
+            line: "I found a shiny acorn!",
+            object: "🍂",
+            caption: "Leaves flutter around the rug.",
+            prompt: "Teacher prompt: Ask, “Can you show me a crunchy leaf?”"
+        },
+        {
+            character: "🦊",
+            line: "Oops, a puddle is splashing!",
+            object: "💧",
+            caption: "A big puddle blocks the path.",
+            prompt: "Teacher prompt: Ask, “Which bridge helps us cross safely?”"
+        },
+        {
+            character: "🦄",
+            line: "We made it! A rainbow appears!",
+            object: "🌈",
+            caption: "A rainbow glows above the rug.",
+            prompt: "Teacher prompt: Ask, “How can we celebrate together?”"
+        }
+    ];
+
+    const arView = document.getElementById('ar-view');
+    const scanBtn = document.getElementById('scan-btn');
+    const nextBtn = document.getElementById('next-btn');
+    const character = document.getElementById('character');
+    const sceneObject = document.getElementById('scene-object');
+    const characterEmoji = document.getElementById('character-emoji');
+    const characterLine = document.getElementById('character-line');
+    const objectEmoji = document.getElementById('object-emoji');
+    const objectCaption = document.getElementById('object-caption');
+    const teacherPrompt = document.getElementById('teacher-prompt');
+    const progressFill = document.getElementById('progress-fill');
+    const progressLabel = document.getElementById('progress-label');
+    const stepCards = Array.from(document.querySelectorAll('.step-card'));
+
+    let currentScene = 0;
+    let scanned = false;
+
+    function updateScene(index) {
+        const scene = scenes[index];
+        characterEmoji.textContent = scene.character;
+        characterLine.textContent = scene.line;
+        objectEmoji.textContent = scene.object;
+        objectCaption.textContent = scene.caption;
+        teacherPrompt.textContent = scene.prompt;
+
+        stepCards.forEach((card) => {
+            card.classList.toggle('active', Number(card.dataset.step) === index);
+        });
+
+        progressFill.style.width = `${((index + 1) / scenes.length) * 100}%`;
+        progressLabel.textContent = `Scene ${index + 1} of ${scenes.length}`;
+    }
+
+    function revealAR() {
+        character.classList.add('show');
+        sceneObject.classList.add('show');
+    }
+
+    scanBtn.addEventListener('click', () => {
+        scanned = true;
+        arView.classList.add('scan-active');
+        revealAR();
+        updateScene(currentScene);
+        scanBtn.textContent = "Scanning...";
+        setTimeout(() => {
+            scanBtn.textContent = "Rescan Area";
+            arView.classList.remove('scan-active');
+        }, 1500);
+    });
+
+    nextBtn.addEventListener('click', () => {
+        if (!scanned) {
+            scanBtn.click();
+            return;
+        }
+        currentScene = (currentScene + 1) % scenes.length;
+        updateScene(currentScene);
+    });
+
+    updateScene(currentScene);
+</script>
+</body>
+</html>
