@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Rhyming Word Garden</title>
+  <style>
+    :root {
+      --sky: #e6f4ff;
+      --grass: #d4f5b1;
+      --stem: #2e8b57;
+      --flower: #ffb347;
+      --berry: #ff6f91;
+      --ink: #25303b;
+      --panel: #ffffff;
+      --accent: #4b7bec;
+      --success: #2ecc71;
+      --warning: #f5b041;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+      background: linear-gradient(180deg, var(--sky), var(--grass));
+      color: var(--ink);
+      padding: 24px;
+      display: flex;
+      justify-content: center;
+    }
+
+    .widget {
+      width: min(960px, 100%);
+      background: var(--panel);
+      border-radius: 20px;
+      box-shadow: 0 18px 40px rgba(37, 48, 59, 0.15);
+      overflow: hidden;
+      border: 4px solid rgba(75, 123, 236, 0.2);
+    }
+
+    header {
+      background: linear-gradient(120deg, #4b7bec, #45aaf2);
+      color: white;
+      padding: 20px 28px;
+    }
+
+    header h1 {
+      margin: 0 0 6px 0;
+      font-size: 1.8rem;
+    }
+
+    header p {
+      margin: 0;
+      opacity: 0.9;
+      font-size: 1rem;
+    }
+
+    .content {
+      display: grid;
+      grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+      gap: 20px;
+      padding: 24px;
+      background: rgba(255, 255, 255, 0.9);
+    }
+
+    .garden {
+      background: #f7fbff;
+      border-radius: 18px;
+      padding: 20px;
+      border: 2px dashed rgba(75, 123, 236, 0.3);
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      min-height: 420px;
+    }
+
+    .prompt {
+      background: white;
+      border-radius: 16px;
+      padding: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      box-shadow: inset 0 0 0 2px rgba(75, 123, 236, 0.15);
+    }
+
+    .prompt h2 {
+      margin: 0;
+      font-size: 1.4rem;
+    }
+
+    .prompt .target {
+      background: var(--flower);
+      padding: 10px 16px;
+      border-radius: 999px;
+      font-size: 1.4rem;
+      font-weight: 700;
+      box-shadow: 0 8px 18px rgba(255, 179, 71, 0.3);
+    }
+
+    .instruction {
+      font-size: 1rem;
+      margin: 0;
+    }
+
+    .word-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 14px;
+    }
+
+    .word-button {
+      border: none;
+      padding: 14px 12px;
+      border-radius: 16px;
+      background: white;
+      font-size: 1.1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+      box-shadow: 0 6px 12px rgba(37, 48, 59, 0.1);
+    }
+
+    .word-button:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 10px 18px rgba(37, 48, 59, 0.15);
+    }
+
+    .word-button.correct {
+      background: rgba(46, 204, 113, 0.25);
+      box-shadow: inset 0 0 0 2px var(--success);
+    }
+
+    .word-button.incorrect {
+      background: rgba(245, 176, 65, 0.25);
+      box-shadow: inset 0 0 0 2px var(--warning);
+    }
+
+    .feedback {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 14px 16px;
+      border-radius: 14px;
+      background: rgba(75, 123, 236, 0.1);
+      font-weight: 600;
+    }
+
+    .feedback span {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .actions {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    button.control {
+      border: none;
+      border-radius: 12px;
+      padding: 10px 16px;
+      font-size: 1rem;
+      cursor: pointer;
+      background: var(--accent);
+      color: white;
+      font-weight: 600;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+      box-shadow: 0 6px 12px rgba(75, 123, 236, 0.3);
+    }
+
+    button.control.secondary {
+      background: #f2f6ff;
+      color: var(--accent);
+      box-shadow: inset 0 0 0 2px rgba(75, 123, 236, 0.25);
+    }
+
+    button.control:hover {
+      transform: translateY(-2px);
+    }
+
+    aside {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .card {
+      background: white;
+      border-radius: 16px;
+      padding: 16px;
+      border: 2px solid rgba(75, 123, 236, 0.15);
+      box-shadow: 0 8px 16px rgba(37, 48, 59, 0.08);
+    }
+
+    .card h3 {
+      margin-top: 0;
+      color: var(--accent);
+    }
+
+    .rhyme-family {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      border-radius: 999px;
+      background: rgba(255, 111, 145, 0.2);
+      font-weight: 700;
+    }
+
+    .stems {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+      margin-top: 10px;
+      font-size: 0.95rem;
+    }
+
+    .stem {
+      background: rgba(46, 204, 113, 0.15);
+      border-radius: 10px;
+      padding: 8px 10px;
+      text-align: center;
+      font-weight: 600;
+    }
+
+    .score {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-weight: 700;
+      font-size: 1.1rem;
+    }
+
+    .score .badge {
+      background: rgba(75, 123, 236, 0.15);
+      color: var(--accent);
+      padding: 6px 12px;
+      border-radius: 999px;
+    }
+
+    .tips {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: grid;
+      gap: 8px;
+      font-size: 0.95rem;
+    }
+
+    .tips li {
+      background: rgba(255, 179, 71, 0.2);
+      padding: 10px 12px;
+      border-radius: 10px;
+    }
+
+    @media (max-width: 860px) {
+      .content {
+        grid-template-columns: 1fr;
+      }
+
+      .garden {
+        min-height: unset;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="widget">
+    <header>
+      <h1>Rhyming Word Garden</h1>
+      <p>Pick the words that sound the same at the end. Grow a full garden of rhymes!</p>
+    </header>
+
+    <section class="content">
+      <div class="garden">
+        <div class="prompt">
+          <div>
+            <p class="instruction">Today we're matching words that rhyme with:</p>
+            <h2 id="target-word" class="target">cat</h2>
+          </div>
+          <div class="actions">
+            <button class="control" id="new-round">New Round</button>
+            <button class="control secondary" id="reveal">Reveal Rhymes</button>
+          </div>
+        </div>
+
+        <div class="word-grid" id="word-grid"></div>
+
+        <div class="feedback" id="feedback">
+          <span>🌼 Choose a word that rhymes with the target word.</span>
+          <span id="progress">0 / 0 found</span>
+        </div>
+      </div>
+
+      <aside>
+        <div class="card">
+          <h3>Rhyme Family</h3>
+          <p>Words that rhyme share the same ending sound.</p>
+          <div class="rhyme-family" id="rhyme-family">-at</div>
+          <div class="stems" id="stem-list"></div>
+        </div>
+
+        <div class="card">
+          <h3>Garden Score</h3>
+          <div class="score">
+            <span>Stars Collected</span>
+            <span class="badge" id="score">0</span>
+          </div>
+          <p>Earn a star every time you find a rhyming word.</p>
+        </div>
+
+        <div class="card">
+          <h3>Teacher Tips</h3>
+          <ul class="tips">
+            <li>Say the word aloud and stretch the ending sound.</li>
+            <li>Clap the part that sounds the same.</li>
+            <li>Look for the letters that match at the end.</li>
+          </ul>
+        </div>
+      </aside>
+    </section>
+  </div>
+
+  <script>
+    const rounds = [
+      {
+        target: "cat",
+        family: "-at",
+        rhymes: ["hat", "bat", "sat", "mat"],
+        distractors: ["can", "cap", "cot", "cub"],
+        stems: ["cat", "bat", "hat", "mat"]
+      },
+      {
+        target: "seed",
+        family: "-eed",
+        rhymes: ["need", "feed", "reed", "deed"],
+        distractors: ["sand", "said", "seat", "side"],
+        stems: ["seed", "feed", "need", "reed"]
+      },
+      {
+        target: "light",
+        family: "-ight",
+        rhymes: ["night", "bright", "kite", "flight"],
+        distractors: ["late", "list", "lift", "like"],
+        stems: ["light", "night", "bright", "flight"]
+      },
+      {
+        target: "book",
+        family: "-ook",
+        rhymes: ["look", "cook", "hook", "took"],
+        distractors: ["back", "bike", "bark", "beak"],
+        stems: ["book", "look", "cook", "hook"]
+      }
+    ];
+
+    const wordGrid = document.getElementById("word-grid");
+    const targetWord = document.getElementById("target-word");
+    const rhymeFamily = document.getElementById("rhyme-family");
+    const stemList = document.getElementById("stem-list");
+    const feedback = document.getElementById("feedback");
+    const progress = document.getElementById("progress");
+    const scoreEl = document.getElementById("score");
+    const newRoundBtn = document.getElementById("new-round");
+    const revealBtn = document.getElementById("reveal");
+
+    let score = 0;
+    let currentRound = null;
+    let foundRhymes = new Set();
+
+    const shuffle = (array) => {
+      const copy = [...array];
+      for (let i = copy.length - 1; i > 0; i -= 1) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [copy[i], copy[j]] = [copy[j], copy[i]];
+      }
+      return copy;
+    };
+
+    const updateProgress = () => {
+      progress.textContent = `${foundRhymes.size} / ${currentRound.rhymes.length} found`;
+    };
+
+    const updateFeedback = (message, emoji) => {
+      feedback.querySelector("span").textContent = `${emoji} ${message}`;
+    };
+
+    const updateStems = (stems) => {
+      stemList.innerHTML = "";
+      stems.forEach((stem) => {
+        const div = document.createElement("div");
+        div.className = "stem";
+        div.textContent = stem;
+        stemList.appendChild(div);
+      });
+    };
+
+    const updateScore = (points) => {
+      score += points;
+      scoreEl.textContent = score;
+    };
+
+    const setRound = () => {
+      currentRound = rounds[Math.floor(Math.random() * rounds.length)];
+      foundRhymes = new Set();
+      targetWord.textContent = currentRound.target;
+      rhymeFamily.textContent = currentRound.family;
+      updateStems(currentRound.stems);
+      updateProgress();
+      updateFeedback("Choose a word that rhymes with the target word.", "🌼");
+
+      const allWords = shuffle([...currentRound.rhymes, ...currentRound.distractors]);
+      wordGrid.innerHTML = "";
+
+      allWords.forEach((word) => {
+        const button = document.createElement("button");
+        button.className = "word-button";
+        button.type = "button";
+        button.textContent = word;
+        button.addEventListener("click", () => {
+          if (currentRound.rhymes.includes(word)) {
+            if (!foundRhymes.has(word)) {
+              foundRhymes.add(word);
+              button.classList.add("correct");
+              updateFeedback("Nice! That word rhymes.", "🌟");
+              updateScore(1);
+              updateProgress();
+            }
+          } else {
+            button.classList.add("incorrect");
+            updateFeedback("Try again. Listen to the ending sound!", "🎧");
+          }
+
+          if (foundRhymes.size === currentRound.rhymes.length) {
+            updateFeedback("Garden complete! You found all the rhymes.", "🌈");
+          }
+        });
+        wordGrid.appendChild(button);
+      });
+    };
+
+    newRoundBtn.addEventListener("click", () => {
+      setRound();
+    });
+
+    revealBtn.addEventListener("click", () => {
+      const buttons = wordGrid.querySelectorAll(".word-button");
+      buttons.forEach((button) => {
+        if (currentRound.rhymes.includes(button.textContent)) {
+          button.classList.add("correct");
+        }
+      });
+      foundRhymes = new Set(currentRound.rhymes);
+      updateProgress();
+      updateFeedback("Here are the rhyming words in this family.", "🔍");
+    });
+
+    setRound();
+  </script>
+</body>
+</html>
