@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chemistry Graphic Organizer</title>
+    <style>
+        :root {
+            --primary: #1d4ed8;
+            --secondary: #0f172a;
+            --accent: #f97316;
+            --bg: #f8fafc;
+            --card: #ffffff;
+            --border: #e2e8f0;
+            --hint: #64748b;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: "Inter", "Segoe UI", sans-serif;
+            background: var(--bg);
+            color: var(--secondary);
+        }
+
+        .widget-shell {
+            max-width: 1100px;
+            margin: 32px auto;
+            padding: 32px;
+            background: var(--card);
+            border-radius: 20px;
+            box-shadow: 0 24px 40px rgba(15, 23, 42, 0.08);
+        }
+
+        header {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            margin-bottom: 32px;
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 1.8rem;
+        }
+
+        header p {
+            margin: 6px 0 0;
+            color: var(--hint);
+        }
+
+        .action-bar {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            border: none;
+            border-radius: 999px;
+            padding: 10px 18px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: #fff;
+        }
+
+        .btn-secondary {
+            background: #e2e8f0;
+            color: var(--secondary);
+        }
+
+        .organizer-grid {
+            display: grid;
+            grid-template-columns: 1.2fr 1fr 1fr;
+            gap: 20px;
+        }
+
+        .concept-core {
+            grid-column: 1 / 2;
+            grid-row: span 2;
+            background: linear-gradient(135deg, #dbeafe, #eff6ff);
+            border-radius: 20px;
+            padding: 24px;
+            position: relative;
+            border: 2px solid #bfdbfe;
+        }
+
+        .concept-core::after {
+            content: "";
+            position: absolute;
+            top: 50%;
+            right: -18px;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: var(--accent);
+            opacity: 0.15;
+            transform: translateY(-50%);
+        }
+
+        .concept-core h2 {
+            margin-top: 0;
+        }
+
+        .card {
+            background: var(--card);
+            border-radius: 16px;
+            padding: 20px;
+            border: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            min-height: 170px;
+        }
+
+        .card h3 {
+            margin: 0;
+            font-size: 1.05rem;
+        }
+
+        .tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.78rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--primary);
+            font-weight: 700;
+        }
+
+        .editable {
+            padding: 10px 12px;
+            border: 1px dashed transparent;
+            border-radius: 12px;
+            min-height: 90px;
+            background: #f8fafc;
+            line-height: 1.5;
+        }
+
+        .editable:focus {
+            outline: none;
+            border-color: var(--accent);
+            background: #fff7ed;
+        }
+
+        .editable[contenteditable="true"]:empty:before {
+            content: attr(data-placeholder);
+            color: var(--hint);
+        }
+
+        .connection-bar {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.85rem;
+            color: var(--hint);
+        }
+
+        .connection-bar span {
+            width: 14px;
+            height: 14px;
+            background: var(--accent);
+            border-radius: 50%;
+            display: inline-block;
+            opacity: 0.4;
+        }
+
+        .footer-notes {
+            margin-top: 24px;
+            padding: 16px 20px;
+            background: #f1f5f9;
+            border-radius: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .footer-notes strong {
+            font-size: 0.95rem;
+        }
+
+        ul {
+            margin: 0;
+            padding-left: 20px;
+        }
+
+        .mini-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 18px;
+            margin-top: 20px;
+        }
+
+        @media (max-width: 960px) {
+            .organizer-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .concept-core {
+                grid-row: auto;
+            }
+        }
+
+        @media print {
+            body {
+                background: white;
+            }
+
+            .widget-shell {
+                box-shadow: none;
+                margin: 0;
+                padding: 0;
+                border-radius: 0;
+            }
+
+            .action-bar {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="widget-shell">
+        <header>
+            <div>
+                <h1>Chemistry Concept Map Organizer</h1>
+                <p>Use this visual organizer to unpack a chemistry topic, summarize evidence, and connect ideas.</p>
+            </div>
+            <div class="action-bar">
+                <button class="btn-primary" onclick="window.print()">Save / Print</button>
+                <button class="btn-secondary" onclick="resetOrganizer()">Reset Organizer</button>
+            </div>
+        </header>
+
+        <section class="organizer-grid">
+            <div class="concept-core">
+                <span class="tag">Central Concept</span>
+                <h2 contenteditable="true" class="editable" data-placeholder="Example: Chemical Bonding">Chemical Bonding</h2>
+                <div class="connection-bar">
+                    <span></span>
+                    Highlight the main idea and the essential question.
+                </div>
+                <div class="editable" contenteditable="true" data-placeholder="Essential question: How do atoms form stable compounds?"></div>
+            </div>
+
+            <div class="card">
+                <span class="tag">Key Properties</span>
+                <h3>Observable Traits</h3>
+                <div class="editable" contenteditable="true" data-placeholder="Examples: electronegativity, bond energy, conductivity..."></div>
+                <div class="connection-bar">
+                    <span></span>
+                    Link the properties to the central concept.
+                </div>
+            </div>
+
+            <div class="card">
+                <span class="tag">Structure</span>
+                <h3>What does it look like?</h3>
+                <div class="editable" contenteditable="true" data-placeholder="Sketch or describe particle models, diagrams, or structures."></div>
+                <div class="connection-bar">
+                    <span></span>
+                    Note how structure explains properties.
+                </div>
+            </div>
+
+            <div class="card">
+                <span class="tag">Process / Reactions</span>
+                <h3>Changes &amp; Mechanisms</h3>
+                <div class="editable" contenteditable="true" data-placeholder="Write reaction steps, equations, or energy changes."></div>
+                <div class="connection-bar">
+                    <span></span>
+                    Identify reactants, products, and conditions.
+                </div>
+            </div>
+
+            <div class="card">
+                <span class="tag">Real-World Examples</span>
+                <h3>Where do we see it?</h3>
+                <div class="editable" contenteditable="true" data-placeholder="Lab applications, industry uses, everyday phenomena..."></div>
+                <div class="connection-bar">
+                    <span></span>
+                    Connect evidence to the concept.
+                </div>
+            </div>
+
+            <div class="card">
+                <span class="tag">Vocabulary</span>
+                <h3>Key Terms &amp; Symbols</h3>
+                <div class="editable" contenteditable="true" data-placeholder="List vocabulary: ions, covalent, lattice, oxidation..."></div>
+                <div class="connection-bar">
+                    <span></span>
+                    Add definitions or formulas.
+                </div>
+            </div>
+        </section>
+
+        <section class="mini-grid">
+            <div class="card">
+                <span class="tag">Claims &amp; Evidence</span>
+                <h3>What evidence supports the idea?</h3>
+                <div class="editable" contenteditable="true" data-placeholder="Lab data, models, or observations that back up the concept."></div>
+            </div>
+            <div class="card">
+                <span class="tag">Connections</span>
+                <h3>How does this link to other topics?</h3>
+                <div class="editable" contenteditable="true" data-placeholder="Link to periodic trends, stoichiometry, kinetics, etc."></div>
+            </div>
+        </section>
+
+        <section class="footer-notes">
+            <strong>Teaching Tips</strong>
+            <ul>
+                <li>Ask students to color-code evidence, vocabulary, and models.</li>
+                <li>Use the organizer as a pre-lab planning sheet or post-lab reflection.</li>
+                <li>Have students compare two organizers to highlight misconceptions.</li>
+            </ul>
+        </section>
+    </div>
+
+    <script>
+        const defaultContent = new Map();
+
+        document.querySelectorAll(".editable").forEach((element, index) => {
+            defaultContent.set(index, element.innerHTML);
+        });
+
+        function resetOrganizer() {
+            document.querySelectorAll(".editable").forEach((element, index) => {
+                element.innerHTML = defaultContent.get(index) || "";
+            });
+        }
+    </script>
+</body>
+</html>
