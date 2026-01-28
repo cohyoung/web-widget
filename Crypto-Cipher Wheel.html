@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Crypto-Cipher Wheel</title>
+  <style>
+    :root {
+      --bg: #0f1226;
+      --panel: #1a1f3d;
+      --accent: #7dd3fc;
+      --accent-2: #c4b5fd;
+      --text: #eef2ff;
+      --muted: #9aa3c7;
+      --ring-1: #38bdf8;
+      --ring-2: #a78bfa;
+      --ring-3: #f472b6;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+      background: radial-gradient(circle at top, #1f2550 0%, #0b0f24 55%);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    .widget {
+      width: min(1100px, 100%);
+      background: rgba(15, 18, 38, 0.9);
+      border-radius: 24px;
+      padding: 28px;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
+      border: 1px solid rgba(125, 211, 252, 0.2);
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 24px;
+    }
+
+    header {
+      grid-column: 1 / -1;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 1.8rem;
+      letter-spacing: 0.04em;
+    }
+
+    .tagline {
+      color: var(--muted);
+      margin-top: 6px;
+      font-size: 0.95rem;
+    }
+
+    .mode-toggle {
+      display: inline-flex;
+      background: #101434;
+      padding: 6px;
+      border-radius: 999px;
+      gap: 6px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .mode-toggle button {
+      background: transparent;
+      border: none;
+      color: var(--muted);
+      padding: 8px 16px;
+      border-radius: 999px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+
+    .mode-toggle button.active {
+      background: linear-gradient(135deg, rgba(125, 211, 252, 0.8), rgba(167, 139, 250, 0.8));
+      color: #0b0f24;
+    }
+
+    .rings-panel {
+      background: var(--panel);
+      border-radius: 18px;
+      padding: 20px;
+      border: 1px solid rgba(125, 211, 252, 0.2);
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      align-items: center;
+      text-align: center;
+    }
+
+    .rings-container {
+      position: relative;
+      width: 260px;
+      height: 260px;
+    }
+
+    .ring {
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      border: 2px dashed rgba(255, 255, 255, 0.2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.4s ease;
+    }
+
+    .ring:nth-child(1) {
+      border-color: rgba(56, 189, 248, 0.6);
+    }
+
+    .ring:nth-child(2) {
+      inset: 18px;
+      border-color: rgba(167, 139, 250, 0.7);
+    }
+
+    .ring:nth-child(3) {
+      inset: 36px;
+      border-color: rgba(244, 114, 182, 0.7);
+    }
+
+    .letter {
+      position: absolute;
+      font-size: 0.68rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      color: var(--text);
+      letter-spacing: 0.05em;
+    }
+
+    .ring-label {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.85rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.2em;
+    }
+
+    .control-group {
+      width: 100%;
+      background: rgba(9, 12, 30, 0.7);
+      border-radius: 14px;
+      padding: 12px 14px;
+      display: grid;
+      gap: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .control-group label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.9rem;
+      color: var(--muted);
+    }
+
+    input[type="range"] {
+      width: 100%;
+      accent-color: var(--accent);
+    }
+
+    .output-panel {
+      background: var(--panel);
+      border-radius: 18px;
+      padding: 20px;
+      border: 1px solid rgba(125, 211, 252, 0.2);
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 110px;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      background: #0c112b;
+      color: var(--text);
+      padding: 12px;
+      font-size: 0.95rem;
+      resize: vertical;
+    }
+
+    .info-card {
+      background: rgba(9, 12, 30, 0.6);
+      border-radius: 14px;
+      padding: 12px 14px;
+      font-size: 0.9rem;
+      color: var(--muted);
+      line-height: 1.5;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .shift-display {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--accent);
+    }
+
+    .actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .actions button {
+      background: linear-gradient(135deg, rgba(125, 211, 252, 0.9), rgba(167, 139, 250, 0.9));
+      border: none;
+      color: #0b0f24;
+      padding: 10px 16px;
+      border-radius: 10px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .actions button.secondary {
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--text);
+    }
+
+    .challenge-panel {
+      background: rgba(9, 12, 30, 0.6);
+      border-radius: 14px;
+      padding: 12px 14px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      display: grid;
+      gap: 10px;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .challenge-panel strong {
+      color: var(--text);
+    }
+
+    @media (max-width: 720px) {
+      .rings-container {
+        width: 220px;
+        height: 220px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="widget">
+    <header>
+      <div>
+        <h1>Crypto-Cipher Wheel</h1>
+        <div class="tagline">Rotate the rings, explore modular arithmetic, and unlock the lesson password.</div>
+      </div>
+      <div class="mode-toggle" role="tablist" aria-label="Cipher mode">
+        <button class="active" data-mode="encrypt" type="button">Encrypt</button>
+        <button data-mode="decrypt" type="button">Decrypt</button>
+      </div>
+    </header>
+
+    <section class="rings-panel">
+      <div class="rings-container" aria-hidden="true">
+        <div class="ring" data-ring="0">
+          <div class="ring-label">Rotor A</div>
+        </div>
+        <div class="ring" data-ring="1">
+          <div class="ring-label">Rotor B</div>
+        </div>
+        <div class="ring" data-ring="2">
+          <div class="ring-label">Rotor C</div>
+        </div>
+      </div>
+
+      <div class="control-group">
+        <label>
+          Rotor A Shift
+          <span id="shift-0">0</span>
+        </label>
+        <input type="range" min="0" max="25" value="0" data-shift="0" />
+      </div>
+
+      <div class="control-group">
+        <label>
+          Rotor B Shift
+          <span id="shift-1">0</span>
+        </label>
+        <input type="range" min="0" max="25" value="0" data-shift="1" />
+      </div>
+
+      <div class="control-group">
+        <label>
+          Rotor C Shift
+          <span id="shift-2">0</span>
+        </label>
+        <input type="range" min="0" max="25" value="0" data-shift="2" />
+      </div>
+
+      <div class="shift-display">
+        <span>Total Shift</span>
+        <span id="total-shift">0</span>
+      </div>
+    </section>
+
+    <section class="output-panel">
+      <label for="plain-text">Message</label>
+      <textarea id="plain-text" placeholder="Type a message to encrypt or decrypt..."></textarea>
+
+      <label for="cipher-text">Result</label>
+      <textarea id="cipher-text" readonly placeholder="Your cipher output appears here."></textarea>
+
+      <div class="actions">
+        <button type="button" id="process">Run Cipher</button>
+        <button type="button" class="secondary" id="swap">Swap Text</button>
+        <button type="button" class="secondary" id="reset">Reset Rings</button>
+      </div>
+
+      <div class="info-card">
+        <strong>Learning Goal:</strong> Explore how modular arithmetic shifts letters around the alphabet. A shift of
+        <strong>n</strong> means each letter moves <strong>n</strong> steps forward (or backward in decryption). Try adding the rotor shifts
+        together and compare the output.
+      </div>
+
+      <div class="challenge-panel">
+        <strong>Teacher Challenge:</strong>
+        <div>
+          Paste an encrypted riddle or question here. Students rotate the rings until the message makes sense — the decoded
+          keyword becomes the lesson password.
+        </div>
+        <textarea id="challenge" placeholder="Encrypted challenge text..."></textarea>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
+    const ringEls = Array.from(document.querySelectorAll(".ring"));
+    const shiftInputs = Array.from(document.querySelectorAll("input[data-shift]"));
+    const shiftLabels = shiftInputs.map((input, index) => document.getElementById(`shift-${index}`));
+    const totalShiftEl = document.getElementById("total-shift");
+    const modeButtons = Array.from(document.querySelectorAll(".mode-toggle button"));
+    const plainText = document.getElementById("plain-text");
+    const cipherText = document.getElementById("cipher-text");
+    const processButton = document.getElementById("process");
+    const swapButton = document.getElementById("swap");
+    const resetButton = document.getElementById("reset");
+
+    let mode = "encrypt";
+
+    const buildRingLetters = (ring, radius) => {
+      alphabet.forEach((letter, index) => {
+        const angle = (360 / alphabet.length) * index;
+        const span = document.createElement("span");
+        span.className = "letter";
+        span.textContent = letter;
+        span.style.transform = `rotate(${angle}deg) translateY(-${radius}px) rotate(-${angle}deg)`;
+        ring.appendChild(span);
+      });
+    };
+
+    ringEls.forEach((ring, index) => {
+      const size = ring.clientWidth / 2;
+      const radius = size - 12;
+      buildRingLetters(ring, radius - index * 6);
+    });
+
+    const getShiftValues = () => shiftInputs.map((input) => Number.parseInt(input.value, 10));
+
+    const updateShifts = () => {
+      const shifts = getShiftValues();
+      shifts.forEach((value, index) => {
+        shiftLabels[index].textContent = value;
+        const degrees = (360 / alphabet.length) * value;
+        ringEls[index].style.transform = `rotate(${degrees}deg)`;
+      });
+      const total = shifts.reduce((sum, value) => sum + value, 0) % alphabet.length;
+      totalShiftEl.textContent = `${total} (${mode === "encrypt" ? "forward" : "backward"})`;
+    };
+
+    const shiftChar = (char, shift) => {
+      const isLower = char === char.toLowerCase();
+      const upperChar = char.toUpperCase();
+      const index = alphabet.indexOf(upperChar);
+      if (index === -1) return char;
+      const newIndex = (index + shift + alphabet.length) % alphabet.length;
+      const shifted = alphabet[newIndex];
+      return isLower ? shifted.toLowerCase() : shifted;
+    };
+
+    const runCipher = () => {
+      const shifts = getShiftValues();
+      const totalShift = shifts.reduce((sum, value) => sum + value, 0) % alphabet.length;
+      const effectiveShift = mode === "encrypt" ? totalShift : -totalShift;
+      const text = plainText.value;
+      cipherText.value = text
+        .split("")
+        .map((char) => shiftChar(char, effectiveShift))
+        .join("");
+    };
+
+    modeButtons.forEach((button) => {
+      button.addEventListener("click", () => {
+        modeButtons.forEach((btn) => btn.classList.remove("active"));
+        button.classList.add("active");
+        mode = button.dataset.mode;
+        updateShifts();
+        runCipher();
+      });
+    });
+
+    shiftInputs.forEach((input) => {
+      input.addEventListener("input", () => {
+        updateShifts();
+        runCipher();
+      });
+    });
+
+    processButton.addEventListener("click", runCipher);
+
+    swapButton.addEventListener("click", () => {
+      const temp = plainText.value;
+      plainText.value = cipherText.value;
+      cipherText.value = temp;
+    });
+
+    resetButton.addEventListener("click", () => {
+      shiftInputs.forEach((input, index) => {
+        input.value = "0";
+        shiftLabels[index].textContent = "0";
+      });
+      updateShifts();
+      runCipher();
+    });
+
+    updateShifts();
+  </script>
+</body>
+</html>
