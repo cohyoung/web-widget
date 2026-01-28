@@ -6,13 +6,15 @@
     <title>Chemistry Graphic Organizer</title>
     <style>
         :root {
-            --primary: #1d4ed8;
+            --primary: #2563eb;
             --secondary: #0f172a;
             --accent: #f97316;
+            --accent-soft: #ffedd5;
             --bg: #f8fafc;
             --card: #ffffff;
             --border: #e2e8f0;
             --hint: #64748b;
+            --success: #10b981;
         }
 
         * {
@@ -27,31 +29,32 @@
         }
 
         .widget-shell {
-            max-width: 1100px;
+            max-width: 1200px;
             margin: 32px auto;
             padding: 32px;
             background: var(--card);
-            border-radius: 20px;
+            border-radius: 24px;
             box-shadow: 0 24px 40px rgba(15, 23, 42, 0.08);
         }
 
         header {
             display: flex;
             flex-wrap: wrap;
-            align-items: center;
+            align-items: flex-start;
             justify-content: space-between;
             gap: 16px;
-            margin-bottom: 32px;
+            margin-bottom: 28px;
         }
 
         header h1 {
             margin: 0;
-            font-size: 1.8rem;
+            font-size: 2rem;
         }
 
         header p {
-            margin: 6px 0 0;
+            margin: 8px 0 0;
             color: var(--hint);
+            max-width: 560px;
         }
 
         .action-bar {
@@ -66,6 +69,12 @@
             padding: 10px 18px;
             font-weight: 600;
             cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 8px 16px rgba(15, 23, 42, 0.08);
         }
 
         .btn-primary {
@@ -78,20 +87,50 @@
             color: var(--secondary);
         }
 
+        .btn-accent {
+            background: var(--accent);
+            color: #fff;
+        }
+
+        .layout-grid {
+            display: grid;
+            grid-template-columns: 1.15fr 1.85fr;
+            gap: 24px;
+        }
+
+        .side-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+        }
+
+        .panel-card {
+            background: #f1f5f9;
+            border-radius: 18px;
+            padding: 20px;
+            border: 1px solid var(--border);
+        }
+
+        .panel-card h3 {
+            margin: 0 0 10px;
+            font-size: 1rem;
+        }
+
         .organizer-grid {
             display: grid;
-            grid-template-columns: 1.2fr 1fr 1fr;
-            gap: 20px;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 18px;
         }
 
         .concept-core {
-            grid-column: 1 / 2;
-            grid-row: span 2;
+            grid-column: 1 / -1;
             background: linear-gradient(135deg, #dbeafe, #eff6ff);
             border-radius: 20px;
             padding: 24px;
             position: relative;
             border: 2px solid #bfdbfe;
+            display: grid;
+            gap: 12px;
         }
 
         .concept-core::after {
@@ -107,24 +146,20 @@
             transform: translateY(-50%);
         }
 
-        .concept-core h2 {
-            margin-top: 0;
-        }
-
         .card {
             background: var(--card);
             border-radius: 16px;
-            padding: 20px;
+            padding: 18px;
             border: 1px solid var(--border);
             display: flex;
             flex-direction: column;
-            gap: 12px;
+            gap: 10px;
             min-height: 170px;
         }
 
         .card h3 {
             margin: 0;
-            font-size: 1.05rem;
+            font-size: 1.02rem;
         }
 
         .tag {
@@ -150,7 +185,7 @@
         .editable:focus {
             outline: none;
             border-color: var(--accent);
-            background: #fff7ed;
+            background: var(--accent-soft);
         }
 
         .editable[contenteditable="true"]:empty:before {
@@ -175,6 +210,58 @@
             opacity: 0.4;
         }
 
+        .checklist {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            display: grid;
+            gap: 8px;
+        }
+
+        .checklist li {
+            display: flex;
+            gap: 10px;
+            align-items: flex-start;
+            font-size: 0.9rem;
+        }
+
+        .checklist input {
+            accent-color: var(--success);
+            margin-top: 3px;
+        }
+
+        .legend {
+            display: grid;
+            gap: 8px;
+            font-size: 0.85rem;
+            color: var(--hint);
+        }
+
+        .legend span {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .legend i {
+            width: 12px;
+            height: 12px;
+            border-radius: 4px;
+            display: inline-block;
+        }
+
+        .legend .model {
+            background: #c7d2fe;
+        }
+
+        .legend .evidence {
+            background: #bbf7d0;
+        }
+
+        .legend .question {
+            background: #fde68a;
+        }
+
         .footer-notes {
             margin-top: 24px;
             padding: 16px 20px;
@@ -194,20 +281,9 @@
             padding-left: 20px;
         }
 
-        .mini-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 18px;
-            margin-top: 20px;
-        }
-
-        @media (max-width: 960px) {
-            .organizer-grid {
+        @media (max-width: 980px) {
+            .layout-grid {
                 grid-template-columns: 1fr;
-            }
-
-            .concept-core {
-                grid-row: auto;
             }
         }
 
@@ -233,110 +309,172 @@
     <div class="widget-shell">
         <header>
             <div>
-                <h1>Chemistry Concept Map Organizer</h1>
-                <p>Use this visual organizer to unpack a chemistry topic, summarize evidence, and connect ideas.</p>
+                <h1>Chemistry Graphic Organizer</h1>
+                <p>Guide students from the big idea to evidence, particle models, and symbolic representations. Fill in each section to build a full chemistry explanation.</p>
             </div>
             <div class="action-bar">
                 <button class="btn-primary" onclick="window.print()">Save / Print</button>
                 <button class="btn-secondary" onclick="resetOrganizer()">Reset Organizer</button>
+                <button class="btn-accent" onclick="loadExample()">Load Example</button>
             </div>
         </header>
 
-        <section class="organizer-grid">
-            <div class="concept-core">
-                <span class="tag">Central Concept</span>
-                <h2 contenteditable="true" class="editable" data-placeholder="Example: Chemical Bonding">Chemical Bonding</h2>
-                <div class="connection-bar">
-                    <span></span>
-                    Highlight the main idea and the essential question.
+        <section class="layout-grid">
+            <aside class="side-panel">
+                <div class="panel-card">
+                    <h3>Learning Targets</h3>
+                    <ul class="checklist">
+                        <li><input type="checkbox">Identify the core concept and essential question.</li>
+                        <li><input type="checkbox">Explain the particle-level model.</li>
+                        <li><input type="checkbox">Connect evidence to claims.</li>
+                        <li><input type="checkbox">Use accurate chemistry vocabulary.</li>
+                    </ul>
                 </div>
-                <div class="editable" contenteditable="true" data-placeholder="Essential question: How do atoms form stable compounds?"></div>
-            </div>
-
-            <div class="card">
-                <span class="tag">Key Properties</span>
-                <h3>Observable Traits</h3>
-                <div class="editable" contenteditable="true" data-placeholder="Examples: electronegativity, bond energy, conductivity..."></div>
-                <div class="connection-bar">
-                    <span></span>
-                    Link the properties to the central concept.
+                <div class="panel-card">
+                    <h3>Color-Coding Key</h3>
+                    <div class="legend">
+                        <span><i class="model"></i>Particle model or diagram ideas</span>
+                        <span><i class="evidence"></i>Lab evidence or data</span>
+                        <span><i class="question"></i>Questions or misconceptions</span>
+                    </div>
                 </div>
-            </div>
-
-            <div class="card">
-                <span class="tag">Structure</span>
-                <h3>What does it look like?</h3>
-                <div class="editable" contenteditable="true" data-placeholder="Sketch or describe particle models, diagrams, or structures."></div>
-                <div class="connection-bar">
-                    <span></span>
-                    Note how structure explains properties.
+                <div class="panel-card">
+                    <h3>Teacher Prompts</h3>
+                    <ul>
+                        <li>What evidence supports this claim?</li>
+                        <li>How does the model explain the observation?</li>
+                        <li>Which variables matter most?</li>
+                    </ul>
                 </div>
-            </div>
+            </aside>
 
-            <div class="card">
-                <span class="tag">Process / Reactions</span>
-                <h3>Changes &amp; Mechanisms</h3>
-                <div class="editable" contenteditable="true" data-placeholder="Write reaction steps, equations, or energy changes."></div>
-                <div class="connection-bar">
-                    <span></span>
-                    Identify reactants, products, and conditions.
+            <section class="organizer-grid">
+                <div class="concept-core">
+                    <span class="tag">Central Concept</span>
+                    <h2 contenteditable="true" class="editable" data-placeholder="Example: Rates of Reaction">Rates of Reaction</h2>
+                    <div class="connection-bar">
+                        <span></span>
+                        Highlight the main idea and the essential question.
+                    </div>
+                    <div class="editable" contenteditable="true" data-placeholder="Essential question: How do collisions affect reaction speed?"></div>
                 </div>
-            </div>
 
-            <div class="card">
-                <span class="tag">Real-World Examples</span>
-                <h3>Where do we see it?</h3>
-                <div class="editable" contenteditable="true" data-placeholder="Lab applications, industry uses, everyday phenomena..."></div>
-                <div class="connection-bar">
-                    <span></span>
-                    Connect evidence to the concept.
+                <div class="card">
+                    <span class="tag">Macroscopic Evidence</span>
+                    <h3>What can we observe?</h3>
+                    <div class="editable" contenteditable="true" data-placeholder="Color change, gas formation, temperature change, precipitate..."></div>
+                    <div class="connection-bar">
+                        <span></span>
+                        Link observable evidence to the concept.
+                    </div>
                 </div>
-            </div>
 
-            <div class="card">
-                <span class="tag">Vocabulary</span>
-                <h3>Key Terms &amp; Symbols</h3>
-                <div class="editable" contenteditable="true" data-placeholder="List vocabulary: ions, covalent, lattice, oxidation..."></div>
-                <div class="connection-bar">
-                    <span></span>
-                    Add definitions or formulas.
+                <div class="card">
+                    <span class="tag">Particle Model</span>
+                    <h3>What happens to particles?</h3>
+                    <div class="editable" contenteditable="true" data-placeholder="Describe collisions, spacing, or energy at the particulate level."></div>
+                    <div class="connection-bar">
+                        <span></span>
+                        Connect model to evidence.
+                    </div>
                 </div>
-            </div>
-        </section>
 
-        <section class="mini-grid">
-            <div class="card">
-                <span class="tag">Claims &amp; Evidence</span>
-                <h3>What evidence supports the idea?</h3>
-                <div class="editable" contenteditable="true" data-placeholder="Lab data, models, or observations that back up the concept."></div>
-            </div>
-            <div class="card">
-                <span class="tag">Connections</span>
-                <h3>How does this link to other topics?</h3>
-                <div class="editable" contenteditable="true" data-placeholder="Link to periodic trends, stoichiometry, kinetics, etc."></div>
-            </div>
+                <div class="card">
+                    <span class="tag">Symbolic Representation</span>
+                    <h3>Equations &amp; Symbols</h3>
+                    <div class="editable" contenteditable="true" data-placeholder="Write balanced equations, rate laws, graphs, or symbols."></div>
+                    <div class="connection-bar">
+                        <span></span>
+                        Show how symbols represent the model.
+                    </div>
+                </div>
+
+                <div class="card">
+                    <span class="tag">Energy &amp; Conditions</span>
+                    <h3>What factors influence it?</h3>
+                    <div class="editable" contenteditable="true" data-placeholder="Temperature, catalysts, surface area, concentration..."></div>
+                    <div class="connection-bar">
+                        <span></span>
+                        Note how conditions change the outcome.
+                    </div>
+                </div>
+
+                <div class="card">
+                    <span class="tag">Vocabulary</span>
+                    <h3>Key Terms</h3>
+                    <div class="editable" contenteditable="true" data-placeholder="Activation energy, collision theory, rate law, catalyst..."></div>
+                    <div class="connection-bar">
+                        <span></span>
+                        Add precise definitions.
+                    </div>
+                </div>
+
+                <div class="card">
+                    <span class="tag">Real-World Connections</span>
+                    <h3>Why does it matter?</h3>
+                    <div class="editable" contenteditable="true" data-placeholder="Industry uses, environmental impact, everyday examples..."></div>
+                    <div class="connection-bar">
+                        <span></span>
+                        Connect to authentic contexts.
+                    </div>
+                </div>
+
+                <div class="card">
+                    <span class="tag">Claims &amp; Evidence</span>
+                    <h3>What supports the idea?</h3>
+                    <div class="editable" contenteditable="true" data-placeholder="Lab data, graphs, or data tables to justify claims."></div>
+                </div>
+
+                <div class="card">
+                    <span class="tag">Next Steps</span>
+                    <h3>Questions &amp; Extensions</h3>
+                    <div class="editable" contenteditable="true" data-placeholder="What do we still wonder? What experiments could we run?"></div>
+                </div>
+            </section>
         </section>
 
         <section class="footer-notes">
             <strong>Teaching Tips</strong>
             <ul>
-                <li>Ask students to color-code evidence, vocabulary, and models.</li>
-                <li>Use the organizer as a pre-lab planning sheet or post-lab reflection.</li>
-                <li>Have students compare two organizers to highlight misconceptions.</li>
+                <li>Have students color-code evidence, models, and questions using the key.</li>
+                <li>Use the organizer as a planning sheet before labs or as a reflection afterward.</li>
+                <li>Encourage students to connect symbolic equations to particle models.</li>
             </ul>
         </section>
     </div>
 
     <script>
         const defaultContent = new Map();
+        const editableElements = document.querySelectorAll(".editable");
 
-        document.querySelectorAll(".editable").forEach((element, index) => {
+        editableElements.forEach((element, index) => {
             defaultContent.set(index, element.innerHTML);
         });
 
         function resetOrganizer() {
-            document.querySelectorAll(".editable").forEach((element, index) => {
+            editableElements.forEach((element, index) => {
                 element.innerHTML = defaultContent.get(index) || "";
+            });
+        }
+
+        function loadExample() {
+            const sampleContent = [
+                "Rates of Reaction",
+                "How do collisions affect reaction speed?",
+                "Magnesium reacts faster in acid as temperature increases; bubbles form more quickly.",
+                "Higher temperature increases particle speed, leading to more frequent successful collisions.",
+                "2HCl + Mg → MgCl₂ + H₂; rate vs. time graph shows steeper slope at higher temps.",
+                "Catalyst lowers activation energy; more surface area increases collision sites.",
+                "Activation energy, collision theory, catalyst, rate law.",
+                "Food preservation, industrial synthesis, safety protocols for reactive chemicals.",
+                "Temperature vs. rate data table showing increased reaction rate; claim supported by faster gas production.",
+                "What happens when we change concentration? How could we measure collision frequency?"
+            ];
+
+            editableElements.forEach((element, index) => {
+                if (sampleContent[index]) {
+                    element.innerHTML = sampleContent[index];
+                }
             });
         }
     </script>
