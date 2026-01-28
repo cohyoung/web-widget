@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>School to Home Directions Helper</title>
+  <style>
+    :root {
+      --bg: #f6f9ff;
+      --card: #ffffff;
+      --primary: #2f6fed;
+      --primary-dark: #1f54bd;
+      --accent: #ffb200;
+      --text: #24324a;
+      --muted: #6b7a90;
+      --success: #20a36b;
+      --danger: #e24c4c;
+      --border: #e3e9f3;
+      --shadow: 0 10px 30px rgba(36, 50, 74, 0.12);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      display: flex;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    .widget {
+      width: min(980px, 100%);
+      background: var(--card);
+      border-radius: 20px;
+      box-shadow: var(--shadow);
+      border: 1px solid var(--border);
+      overflow: hidden;
+    }
+
+    header {
+      background: linear-gradient(120deg, #2f6fed, #6aa8ff);
+      color: #fff;
+      padding: 28px 32px 20px;
+    }
+
+    header h1 {
+      margin: 0;
+      font-size: 1.8rem;
+    }
+
+    header p {
+      margin: 8px 0 0;
+      font-size: 1rem;
+      opacity: 0.9;
+    }
+
+    .content {
+      display: grid;
+      grid-template-columns: 1.1fr 0.9fr;
+      gap: 24px;
+      padding: 28px 32px 32px;
+    }
+
+    .section {
+      background: #fdfdff;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 20px;
+    }
+
+    .route-selector {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    select {
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      padding: 10px 14px;
+      font-size: 1rem;
+      min-width: 220px;
+    }
+
+    .tag {
+      background: #e7f0ff;
+      color: var(--primary);
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-weight: 600;
+      font-size: 0.9rem;
+    }
+
+    .step-card {
+      display: flex;
+      gap: 16px;
+      align-items: flex-start;
+    }
+
+    .step-icon {
+      font-size: 2.6rem;
+      background: #eef4ff;
+      border-radius: 18px;
+      padding: 14px;
+      min-width: 70px;
+      text-align: center;
+    }
+
+    .step-title {
+      font-size: 1.3rem;
+      margin: 0 0 6px;
+    }
+
+    .step-detail {
+      margin: 0 0 10px;
+      color: var(--muted);
+      font-size: 1.05rem;
+      line-height: 1.5;
+    }
+
+    .cue {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: #fff7e3;
+      color: #8a5a00;
+      padding: 6px 10px;
+      border-radius: 10px;
+      font-weight: 600;
+      font-size: 0.95rem;
+    }
+
+    .controls {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 12px;
+      margin-top: 16px;
+    }
+
+    button {
+      border: none;
+      border-radius: 12px;
+      padding: 12px 14px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.1s ease, box-shadow 0.2s ease;
+    }
+
+    button:active {
+      transform: scale(0.98);
+    }
+
+    .primary {
+      background: var(--primary);
+      color: #fff;
+      box-shadow: 0 6px 16px rgba(47, 111, 237, 0.3);
+    }
+
+    .primary:hover {
+      background: var(--primary-dark);
+    }
+
+    .secondary {
+      background: #eef4ff;
+      color: var(--primary);
+    }
+
+    .success {
+      background: #e6f6ef;
+      color: var(--success);
+    }
+
+    .danger {
+      background: #ffe9e9;
+      color: var(--danger);
+    }
+
+    .progress {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 16px;
+      flex-wrap: wrap;
+    }
+
+    .dot {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      border: 2px solid var(--border);
+      display: grid;
+      place-items: center;
+      font-size: 0.8rem;
+      color: var(--muted);
+      background: #fff;
+    }
+
+    .dot.active {
+      background: var(--primary);
+      color: #fff;
+      border-color: var(--primary);
+    }
+
+    .dot.done {
+      background: var(--success);
+      color: #fff;
+      border-color: var(--success);
+    }
+
+    .map-list {
+      list-style: none;
+      padding: 0;
+      margin: 16px 0 0;
+      display: grid;
+      gap: 10px;
+    }
+
+    .map-list li {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 12px;
+      border-radius: 12px;
+      border: 1px dashed var(--border);
+      background: #f8fbff;
+    }
+
+    .map-list li strong {
+      color: var(--text);
+      font-weight: 600;
+    }
+
+    .helper {
+      color: var(--muted);
+      font-size: 0.95rem;
+      margin: 8px 0 0;
+    }
+
+    .footer-actions {
+      margin-top: 18px;
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .quick-card {
+      background: #f8f1ff;
+      border-radius: 14px;
+      padding: 16px;
+      border: 1px solid #eadcff;
+    }
+
+    .quick-card h3 {
+      margin: 0 0 6px;
+    }
+
+    @media (max-width: 900px) {
+      .content {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="widget" role="application" aria-label="School to Home directions helper">
+    <header>
+      <h1>School to Home Directions Helper</h1>
+      <p>Simple, step-by-step directions with pictures, reminders, and a calm voice prompt.</p>
+    </header>
+
+    <div class="content">
+      <section class="section">
+        <div class="route-selector">
+          <div>
+            <strong>Choose today’s route:</strong>
+          </div>
+          <select id="routeSelect" aria-label="Choose route">
+            <option value="bus">Bus + Short Walk</option>
+            <option value="walk">Walking with Trusted Adult</option>
+          </select>
+          <span class="tag" id="routeTime">About 25 minutes</span>
+        </div>
+
+        <div class="step-card" style="margin-top: 18px;">
+          <div class="step-icon" id="stepIcon">🚌</div>
+          <div>
+            <h2 class="step-title" id="stepTitle">Step title</h2>
+            <p class="step-detail" id="stepDetail">Step detail</p>
+            <div class="cue" id="stepCue">👀 Look for the big tree</div>
+          </div>
+        </div>
+
+        <div class="controls">
+          <button class="secondary" id="prevBtn">⬅️ Back</button>
+          <button class="primary" id="nextBtn">Next ➡️</button>
+          <button class="secondary" id="listenBtn">🔊 Listen</button>
+          <button class="success" id="checkInBtn">✅ I’m Safe</button>
+        </div>
+
+        <div class="progress" id="progressDots"></div>
+
+        <div class="footer-actions">
+          <button class="secondary" id="restartBtn">🔁 Start Over</button>
+          <button class="danger" id="helpBtn">☎️ Call for Help</button>
+        </div>
+
+        <p class="helper" id="helperText">Tip: Tap “Listen” if you want the directions read aloud.</p>
+      </section>
+
+      <aside class="section">
+        <div class="quick-card">
+          <h3>Today’s Safe Plan</h3>
+          <p class="helper" style="margin-top: 4px;">You are going from <strong>School Main Doors</strong> to <strong>Home</strong>.</p>
+          <ul class="map-list" id="routeList"></ul>
+        </div>
+
+        <div class="quick-card" style="margin-top: 18px;">
+          <h3>Helpful Reminders</h3>
+          <ul class="map-list">
+            <li>🎒 Keep your backpack on.</li>
+            <li>🤝 Stay with your helper or bus driver.</li>
+            <li>📱 If you are unsure, press “Call for Help.”</li>
+          </ul>
+        </div>
+      </aside>
+    </div>
+  </div>
+
+  <script>
+    const routes = {
+      bus: {
+        time: "About 25 minutes",
+        steps: [
+          {
+            title: "Exit the school doors",
+            detail: "Walk straight to the main doors and wait under the blue sign.",
+            cue: "👀 Look for the big blue sign.",
+            icon: "🏫",
+          },
+          {
+            title: "Go to the bus stop",
+            detail: "Stay on the sidewalk and stop at the bench with the yellow line.",
+            cue: "🪑 Sit at the bench until the bus arrives.",
+            icon: "🚏",
+          },
+          {
+            title: "Ride Bus 22",
+            detail: "Tell the driver you are going to Maple Street and sit near the front.",
+            cue: "🔔 Ring the bell at Maple Street.",
+            icon: "🚌",
+          },
+          {
+            title: "Walk to the red mailbox",
+            detail: "Get off at Maple Street. Walk past the park until you see a red mailbox.",
+            cue: "📮 The red mailbox means you are close.",
+            icon: "🚶",
+          },
+          {
+            title: "Arrive home",
+            detail: "Turn right at the mailbox and walk to the blue door. You made it!",
+            cue: "🏡 Home has a blue door.",
+            icon: "🏡",
+          },
+        ],
+      },
+      walk: {
+        time: "About 20 minutes",
+        steps: [
+          {
+            title: "Meet your helper",
+            detail: "Wait at the main doors. Your helper wears a green badge.",
+            cue: "🟢 Look for the green badge.",
+            icon: "🤝",
+          },
+          {
+            title: "Walk to the crosswalk",
+            detail: "Stay together and walk to the white crosswalk near the flagpole.",
+            cue: "🚦 Wait for the walk signal.",
+            icon: "🚦",
+          },
+          {
+            title: "Pass the library",
+            detail: "Keep walking straight. The library is a big brown building.",
+            cue: "📚 Wave to the librarian window.",
+            icon: "📚",
+          },
+          {
+            title: "Turn at the playground",
+            detail: "Turn left at the playground with the red slide.",
+            cue: "🛝 The red slide means turn left.",
+            icon: "🛝",
+          },
+          {
+            title: "Arrive home",
+            detail: "Walk two more houses to the blue door. You are home!",
+            cue: "🏠 Look for the blue door.",
+            icon: "🏠",
+          },
+        ],
+      },
+    };
+
+    const routeSelect = document.getElementById("routeSelect");
+    const routeTime = document.getElementById("routeTime");
+    const stepTitle = document.getElementById("stepTitle");
+    const stepDetail = document.getElementById("stepDetail");
+    const stepCue = document.getElementById("stepCue");
+    const stepIcon = document.getElementById("stepIcon");
+    const progressDots = document.getElementById("progressDots");
+    const routeList = document.getElementById("routeList");
+    const helperText = document.getElementById("helperText");
+
+    const prevBtn = document.getElementById("prevBtn");
+    const nextBtn = document.getElementById("nextBtn");
+    const listenBtn = document.getElementById("listenBtn");
+    const checkInBtn = document.getElementById("checkInBtn");
+    const restartBtn = document.getElementById("restartBtn");
+    const helpBtn = document.getElementById("helpBtn");
+
+    let currentRoute = "bus";
+    let currentStep = 0;
+
+    const updateRouteList = () => {
+      routeList.innerHTML = "";
+      routes[currentRoute].steps.forEach((step, index) => {
+        const li = document.createElement("li");
+        li.innerHTML = `<span>${step.icon}</span><div><strong>Step ${index + 1}:</strong> ${step.title}</div>`;
+        routeList.appendChild(li);
+      });
+    };
+
+    const updateProgressDots = () => {
+      progressDots.innerHTML = "";
+      routes[currentRoute].steps.forEach((_, index) => {
+        const dot = document.createElement("div");
+        dot.classList.add("dot");
+        if (index < currentStep) dot.classList.add("done");
+        if (index === currentStep) dot.classList.add("active");
+        dot.textContent = index + 1;
+        progressDots.appendChild(dot);
+      });
+    };
+
+    const updateStep = () => {
+      const step = routes[currentRoute].steps[currentStep];
+      stepTitle.textContent = step.title;
+      stepDetail.textContent = step.detail;
+      stepCue.textContent = step.cue;
+      stepIcon.textContent = step.icon;
+      routeTime.textContent = routes[currentRoute].time;
+      prevBtn.disabled = currentStep === 0;
+      nextBtn.disabled = currentStep === routes[currentRoute].steps.length - 1;
+      prevBtn.style.opacity = prevBtn.disabled ? "0.5" : "1";
+      nextBtn.style.opacity = nextBtn.disabled ? "0.5" : "1";
+      updateProgressDots();
+    };
+
+    const speakStep = () => {
+      if (!("speechSynthesis" in window)) {
+        helperText.textContent = "Voice is not available on this device.";
+        return;
+      }
+      window.speechSynthesis.cancel();
+      const step = routes[currentRoute].steps[currentStep];
+      const utterance = new SpeechSynthesisUtterance(
+        `${step.title}. ${step.detail}. ${step.cue}`
+      );
+      utterance.rate = 0.9;
+      utterance.pitch = 1.1;
+      window.speechSynthesis.speak(utterance);
+    };
+
+    routeSelect.addEventListener("change", (event) => {
+      currentRoute = event.target.value;
+      currentStep = 0;
+      updateRouteList();
+      updateStep();
+    });
+
+    nextBtn.addEventListener("click", () => {
+      if (currentStep < routes[currentRoute].steps.length - 1) {
+        currentStep += 1;
+        updateStep();
+      }
+    });
+
+    prevBtn.addEventListener("click", () => {
+      if (currentStep > 0) {
+        currentStep -= 1;
+        updateStep();
+      }
+    });
+
+    listenBtn.addEventListener("click", speakStep);
+
+    checkInBtn.addEventListener("click", () => {
+      helperText.textContent = "Great job! You checked in as safe.";
+      helperText.style.color = "var(--success)";
+    });
+
+    restartBtn.addEventListener("click", () => {
+      currentStep = 0;
+      helperText.textContent = "Tip: Tap “Listen” if you want the directions read aloud.";
+      helperText.style.color = "var(--muted)";
+      updateStep();
+    });
+
+    helpBtn.addEventListener("click", () => {
+      helperText.textContent = "Calling a trusted helper now. Stay where you are.";
+      helperText.style.color = "var(--danger)";
+    });
+
+    updateRouteList();
+    updateStep();
+  </script>
+</body>
+</html>
