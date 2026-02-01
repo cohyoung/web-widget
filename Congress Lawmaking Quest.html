@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Lawmaking Quest: Point & Click Congress Game</title>
+  <style>
+    :root {
+      --ink: #1f2a44;
+      --accent: #3b82f6;
+      --accent-dark: #1d4ed8;
+      --sun: #facc15;
+      --bg: #eef4ff;
+      --card: #ffffff;
+      --shadow: 0 12px 30px rgba(31, 42, 68, 0.15);
+      --success: #22c55e;
+      --warning: #f97316;
+      --danger: #ef4444;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: "Segoe UI", "Trebuchet MS", sans-serif;
+      background: radial-gradient(circle at top, #ffffff 0%, var(--bg) 60%, #dfe9ff 100%);
+      color: var(--ink);
+      padding: 24px;
+      display: flex;
+      justify-content: center;
+    }
+
+    .widget {
+      width: min(1100px, 100%);
+      background: var(--card);
+      border-radius: 24px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      display: grid;
+      grid-template-columns: 1.1fr 0.9fr;
+    }
+
+    header {
+      grid-column: 1 / -1;
+      padding: 24px 28px 18px;
+      background: linear-gradient(120deg, #fef9c3 0%, #e0f2fe 55%, #eef2ff 100%);
+      border-bottom: 1px solid #e2e8f0;
+    }
+
+    header h1 {
+      margin: 0 0 8px;
+      font-size: clamp(1.7rem, 2.6vw, 2.6rem);
+    }
+
+    header p {
+      margin: 0;
+      font-size: 1.05rem;
+      max-width: 760px;
+    }
+
+    .map-panel {
+      padding: 28px;
+      background: #f8fbff;
+      border-right: 1px solid #e2e8f0;
+      position: relative;
+    }
+
+    .map-card {
+      background: #ffffff;
+      border-radius: 20px;
+      padding: 20px;
+      box-shadow: inset 0 0 0 2px #e2e8f0;
+      position: relative;
+      min-height: 460px;
+      overflow: hidden;
+    }
+
+    .capitol {
+      position: absolute;
+      right: -30px;
+      bottom: -20px;
+      font-size: 12rem;
+      opacity: 0.08;
+    }
+
+    .step-path {
+      position: absolute;
+      top: 80px;
+      left: 40px;
+      right: 120px;
+      bottom: 80px;
+      border: 3px dashed #c7d2fe;
+      border-radius: 40px;
+    }
+
+    .step-node {
+      position: absolute;
+      width: 150px;
+      padding: 12px;
+      border-radius: 16px;
+      background: #ffffff;
+      border: 2px solid #dbeafe;
+      box-shadow: 0 8px 18px rgba(31, 42, 68, 0.12);
+      display: grid;
+      gap: 6px;
+      transition: transform 0.2s ease, border-color 0.2s ease;
+    }
+
+    .step-node span {
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: #475569;
+    }
+
+    .step-node h3 {
+      margin: 0;
+      font-size: 1rem;
+    }
+
+    .step-node.active {
+      border-color: var(--accent);
+      transform: translateY(-4px);
+    }
+
+    .step-node.completed {
+      border-color: var(--success);
+      background: #ecfdf5;
+    }
+
+    .step-node.locked {
+      opacity: 0.55;
+    }
+
+    .node-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      padding: 4px 8px;
+      border-radius: 999px;
+      background: #e0e7ff;
+      color: #1e40af;
+      width: fit-content;
+    }
+
+    .mission-panel {
+      padding: 28px;
+      display: grid;
+      gap: 18px;
+    }
+
+    .mission-card {
+      background: #ffffff;
+      border-radius: 18px;
+      padding: 20px;
+      border: 2px solid #e2e8f0;
+      display: grid;
+      gap: 14px;
+    }
+
+    .mission-card h2 {
+      margin: 0;
+      font-size: 1.3rem;
+    }
+
+    .mission-card p {
+      margin: 0;
+      line-height: 1.5;
+    }
+
+    .progress {
+      background: #e2e8f0;
+      border-radius: 999px;
+      overflow: hidden;
+      height: 12px;
+    }
+
+    .progress-bar {
+      height: 100%;
+      width: 0;
+      background: linear-gradient(90deg, var(--accent) 0%, var(--success) 100%);
+      transition: width 0.3s ease;
+    }
+
+    .action-grid {
+      display: grid;
+      gap: 10px;
+    }
+
+    .action-btn {
+      background: #f8fafc;
+      border: 2px solid #cbd5f5;
+      border-radius: 14px;
+      padding: 12px 14px;
+      text-align: left;
+      cursor: pointer;
+      font-weight: 600;
+      transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+    }
+
+    .action-btn:hover {
+      transform: translateY(-2px);
+      border-color: var(--accent);
+      background: #eff6ff;
+    }
+
+    .action-btn.correct {
+      border-color: var(--success);
+      background: #ecfdf5;
+    }
+
+    .action-btn.wrong {
+      border-color: var(--danger);
+      background: #fef2f2;
+    }
+
+    .feedback {
+      padding: 12px 14px;
+      border-radius: 12px;
+      background: #eef2ff;
+      font-weight: 600;
+    }
+
+    .feedback.success {
+      background: #ecfdf5;
+      color: #166534;
+    }
+
+    .feedback.warn {
+      background: #fff7ed;
+      color: #9a3412;
+    }
+
+    .log {
+      background: #f8fafc;
+      border-radius: 16px;
+      padding: 16px;
+      border: 1px solid #e2e8f0;
+    }
+
+    .log ul {
+      margin: 10px 0 0;
+      padding-left: 20px;
+      display: grid;
+      gap: 8px;
+    }
+
+    .button-row {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .ghost-btn {
+      border: 2px solid var(--accent);
+      background: #ffffff;
+      color: var(--accent-dark);
+      padding: 8px 14px;
+      border-radius: 999px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.2s ease, color 0.2s ease;
+    }
+
+    .ghost-btn:hover {
+      background: var(--accent);
+      color: #ffffff;
+    }
+
+    .fact-card {
+      background: #fefce8;
+      border-radius: 16px;
+      padding: 14px;
+      border: 2px dashed #fde047;
+      font-size: 0.95rem;
+    }
+
+    @media (max-width: 900px) {
+      .widget {
+        grid-template-columns: 1fr;
+      }
+
+      .map-panel {
+        border-right: none;
+        border-bottom: 1px solid #e2e8f0;
+      }
+
+      .map-card {
+        min-height: 380px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="widget">
+    <header>
+      <h1>Lawmaking Quest: Point &amp; Click Congress Game</h1>
+      <p>Guide a new bill from idea to law. Click the best action at each stop to show how a bill becomes a law in Congress.</p>
+    </header>
+
+    <section class="map-panel">
+      <div class="map-card">
+        <div class="step-path"></div>
+        <div class="capitol">🏛️</div>
+        <div class="step-node active" data-step="0" style="top: 40px; left: 50px;">
+          <span>Step 1</span>
+          <h3>Big Idea</h3>
+          <div class="node-badge">🏫 Citizen input</div>
+        </div>
+        <div class="step-node locked" data-step="1" style="top: 40px; right: 140px;">
+          <span>Step 2</span>
+          <h3>Bill Drafted</h3>
+          <div class="node-badge">📝 Write it</div>
+        </div>
+        <div class="step-node locked" data-step="2" style="top: 190px; left: 40px;">
+          <span>Step 3</span>
+          <h3>Committee</h3>
+          <div class="node-badge">🔍 Study</div>
+        </div>
+        <div class="step-node locked" data-step="3" style="top: 190px; right: 160px;">
+          <span>Step 4</span>
+          <h3>House Vote</h3>
+          <div class="node-badge">🗳️ Vote</div>
+        </div>
+        <div class="step-node locked" data-step="4" style="bottom: 90px; left: 60px;">
+          <span>Step 5</span>
+          <h3>Senate Vote</h3>
+          <div class="node-badge">🏛️ Second vote</div>
+        </div>
+        <div class="step-node locked" data-step="5" style="bottom: 90px; right: 140px;">
+          <span>Step 6</span>
+          <h3>Conference</h3>
+          <div class="node-badge">🤝 Match versions</div>
+        </div>
+        <div class="step-node locked" data-step="6" style="bottom: 200px; left: 320px;">
+          <span>Step 7</span>
+          <h3>President</h3>
+          <div class="node-badge">✍️ Sign or veto</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="mission-panel">
+      <div class="mission-card">
+        <h2 id="mission-title">Mission 1: Start with a need</h2>
+        <p id="mission-text">Students in your state want safer crosswalks. What is the first thing to do?</p>
+        <div class="progress" aria-label="Progress">
+          <div class="progress-bar" id="progress-bar"></div>
+        </div>
+        <div class="action-grid" id="action-grid"></div>
+        <div class="feedback" id="feedback" role="status">Choose the best action to move the bill forward.</div>
+      </div>
+
+      <div class="log">
+        <strong>Action Log</strong>
+        <ul id="log-list">
+          <li>Game ready: click an action to begin.</li>
+        </ul>
+      </div>
+
+      <div class="button-row">
+        <button class="ghost-btn" id="restart-btn">Restart Quest</button>
+        <button class="ghost-btn" id="fact-btn">New Fun Fact</button>
+      </div>
+
+      <div class="fact-card" id="fact-card">Fun Fact: Bills can start in either the House or the Senate, but money bills must start in the House.</div>
+    </section>
+  </div>
+
+  <script>
+    const steps = [
+      {
+        title: "Mission 1: Start with a need",
+        text: "Students in your state want safer crosswalks. What is the first thing to do?",
+        options: [
+          { text: "Share the idea with a member of Congress and ask them to sponsor it.", correct: true, log: "A representative agreed to sponsor the idea." },
+          { text: "Send it straight to the President.", correct: false, log: "The President cannot start a bill." },
+          { text: "Hold a nationwide election.", correct: false, log: "Elections are not required to start a bill." }
+        ],
+        fact: "Citizens, groups, and lawmakers can suggest bill ideas, but a member of Congress must introduce it."
+      },
+      {
+        title: "Mission 2: Draft the bill",
+        text: "Your member of Congress says yes! What happens next?",
+        options: [
+          { text: "Write the bill with help from experts and legal staff.", correct: true, log: "The bill text is drafted and ready." },
+          { text: "Skip writing and go directly to a vote.", correct: false, log: "Lawmakers must vote on a written bill." },
+          { text: "Ask the Supreme Court to approve it first.", correct: false, log: "The Court reviews laws after they pass." }
+        ],
+        fact: "Legislative lawyers help turn ideas into precise, legal language."
+      },
+      {
+        title: "Mission 3: Committee time",
+        text: "The bill is introduced. Where does it go next?",
+        options: [
+          { text: "A committee studies it, holds hearings, and edits it.", correct: true, log: "The committee held hearings and improved the bill." },
+          { text: "It becomes law automatically.", correct: false, log: "Bills never become law automatically." },
+          { text: "It is signed by the Speaker without voting.", correct: false, log: "The Speaker cannot sign a bill into law alone." }
+        ],
+        fact: "Committees are called the 'workshops' of Congress because they do deep research."
+      },
+      {
+        title: "Mission 4: House vote",
+        text: "The committee approves the bill. What does the full House do?",
+        options: [
+          { text: "Debate and vote on the bill.", correct: true, log: "The House voted to pass the bill." },
+          { text: "Send it to the President right away.", correct: false, log: "The Senate must vote too." },
+          { text: "Mail it to every state governor.", correct: false, log: "Governors do not approve federal bills." }
+        ],
+        fact: "The House has 435 members. A simple majority passes a bill."
+      },
+      {
+        title: "Mission 5: Senate vote",
+        text: "Now the bill goes to the Senate. What happens there?",
+        options: [
+          { text: "Senators debate, may amend, and vote on the bill.", correct: true, log: "The Senate approved the bill with some edits." },
+          { text: "The bill is archived in the Library of Congress.", correct: false, log: "Bills are archived after becoming law." },
+          { text: "The Vice President writes a new bill.", correct: false, log: "The Vice President presides but does not write bills." }
+        ],
+        fact: "The Senate has 100 members, two from each state."
+      },
+      {
+        title: "Mission 6: Conference committee",
+        text: "The House and Senate versions are slightly different. What is the fix?",
+        options: [
+          { text: "A conference committee makes one final version.", correct: true, log: "Both chambers agreed on a single final bill." },
+          { text: "Erase the changes and start over.", correct: false, log: "Lawmakers try to reconcile differences first." },
+          { text: "Send both versions to states to choose.", correct: false, log: "Congress must send one final version." }
+        ],
+        fact: "Conference committees include members from both the House and Senate."
+      },
+      {
+        title: "Mission 7: Presidential action",
+        text: "The final bill reaches the President. What can the President do?",
+        options: [
+          { text: "Sign it into law or veto it.", correct: true, log: "The President signed the bill. It is now law!" },
+          { text: "Send it to the Supreme Court for a vote.", correct: false, log: "The Court does not vote on bills." },
+          { text: "Give it to a governor to sign.", correct: false, log: "Governors sign state laws, not federal bills." }
+        ],
+        fact: "Congress can override a veto with a two-thirds vote in both chambers."
+      }
+    ];
+
+    const facts = [
+      "Bills can start in either the House or the Senate, but money bills must start in the House.",
+      "Only about 5% of introduced bills become law each session.",
+      "Committees can amend, rewrite, or table bills before they reach the floor.",
+      "The President has 10 days (excluding Sundays) to sign or veto a bill.",
+      "A veto override requires a two-thirds vote in both the House and Senate."
+    ];
+
+    const actionGrid = document.getElementById("action-grid");
+    const missionTitle = document.getElementById("mission-title");
+    const missionText = document.getElementById("mission-text");
+    const feedback = document.getElementById("feedback");
+    const progressBar = document.getElementById("progress-bar");
+    const logList = document.getElementById("log-list");
+    const factCard = document.getElementById("fact-card");
+    const stepNodes = Array.from(document.querySelectorAll(".step-node"));
+
+    let currentStep = 0;
+
+    const renderStep = () => {
+      const step = steps[currentStep];
+      missionTitle.textContent = step.title;
+      missionText.textContent = step.text;
+      feedback.textContent = "Choose the best action to move the bill forward.";
+      feedback.className = "feedback";
+      actionGrid.innerHTML = "";
+
+      step.options.forEach((option, index) => {
+        const button = document.createElement("button");
+        button.className = "action-btn";
+        button.type = "button";
+        button.textContent = option.text;
+        button.addEventListener("click", () => handleChoice(option, button, index));
+        actionGrid.appendChild(button);
+      });
+
+      progressBar.style.width = `${(currentStep / steps.length) * 100}%`;
+      updateNodes();
+    };
+
+    const handleChoice = (option, button) => {
+      const buttons = actionGrid.querySelectorAll(".action-btn");
+      buttons.forEach((btn) => btn.setAttribute("disabled", "disabled"));
+
+      if (option.correct) {
+        button.classList.add("correct");
+        feedback.textContent = "Great choice! The bill moves forward.";
+        feedback.className = "feedback success";
+        logAction(option.log, true);
+        updateNodes(true);
+        setTimeout(() => {
+          currentStep += 1;
+          if (currentStep < steps.length) {
+            renderStep();
+          } else {
+            showWin();
+          }
+        }, 800);
+      } else {
+        button.classList.add("wrong");
+        feedback.textContent = "Not quite. Try again to keep the bill moving.";
+        feedback.className = "feedback warn";
+        logAction(option.log, false);
+        buttons.forEach((btn) => btn.removeAttribute("disabled"));
+      }
+    };
+
+    const updateNodes = (completed = false) => {
+      stepNodes.forEach((node, index) => {
+        node.classList.remove("active");
+        node.classList.remove("completed");
+        node.classList.remove("locked");
+
+        if (index < currentStep) {
+          node.classList.add("completed");
+        } else if (index === currentStep) {
+          node.classList.add("active");
+        } else {
+          node.classList.add("locked");
+        }
+      });
+
+      if (completed) {
+        progressBar.style.width = `${((currentStep + 1) / steps.length) * 100}%`;
+      }
+    };
+
+    const logAction = (text, success) => {
+      const item = document.createElement("li");
+      item.textContent = text;
+      item.style.color = success ? "#166534" : "#9a3412";
+      logList.appendChild(item);
+    };
+
+    const showWin = () => {
+      missionTitle.textContent = "Mission Complete!";
+      missionText.textContent = "Your bill became a law. Congress and the President worked together to solve the problem.";
+      actionGrid.innerHTML = "";
+      feedback.textContent = "Want to play again? Click Restart Quest.";
+      feedback.className = "feedback success";
+      progressBar.style.width = "100%";
+      updateNodes();
+      logAction("Celebration: The bill is now law!", true);
+    };
+
+    const restart = () => {
+      currentStep = 0;
+      logList.innerHTML = "<li>Game reset: click an action to begin.</li>";
+      renderStep();
+    };
+
+    const newFact = () => {
+      const nextFact = facts[Math.floor(Math.random() * facts.length)];
+      factCard.textContent = `Fun Fact: ${nextFact}`;
+    };
+
+    document.getElementById("restart-btn").addEventListener("click", restart);
+    document.getElementById("fact-btn").addEventListener("click", newFact);
+
+    renderStep();
+  </script>
+</body>
+</html>
