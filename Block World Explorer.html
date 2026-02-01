@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Block World Explorer Widget</title>
+    <style>
+        :root {
+            --bg: #0c111b;
+            --panel: rgba(15, 23, 42, 0.94);
+            --accent: #4ade80;
+            --accent-dark: #15803d;
+            --text: #e2e8f0;
+            --muted: #94a3b8;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            font-family: "Segoe UI", system-ui, sans-serif;
+            background: radial-gradient(circle at top, #1e293b, #020617 70%);
+            color: var(--text);
+            display: flex;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .widget {
+            width: min(1100px, 95vw);
+            background: rgba(2, 6, 23, 0.92);
+            border-radius: 18px;
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            box-shadow: 0 20px 40px rgba(15, 23, 42, 0.6);
+            overflow: hidden;
+        }
+
+        header {
+            padding: 20px 28px;
+            background: linear-gradient(135deg, rgba(74, 222, 128, 0.2), rgba(15, 118, 110, 0.15));
+            border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 1.6rem;
+        }
+
+        header p {
+            margin: 6px 0 0;
+            color: var(--muted);
+            font-size: 0.95rem;
+        }
+
+        .content {
+            display: grid;
+            grid-template-columns: minmax(220px, 1fr) minmax(0, 3fr);
+            gap: 18px;
+            padding: 18px;
+        }
+
+        .panel {
+            background: var(--panel);
+            border-radius: 14px;
+            padding: 16px;
+            border: 1px solid rgba(148, 163, 184, 0.15);
+        }
+
+        .panel h2 {
+            margin-top: 0;
+            font-size: 1.05rem;
+        }
+
+        .controls {
+            display: grid;
+            gap: 12px;
+        }
+
+        label {
+            font-size: 0.85rem;
+            color: var(--muted);
+        }
+
+        input, select, button {
+            width: 100%;
+            padding: 8px 10px;
+            border-radius: 8px;
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            background: rgba(15, 23, 42, 0.8);
+            color: var(--text);
+            font-size: 0.9rem;
+        }
+
+        button {
+            cursor: pointer;
+            background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+            border: none;
+            font-weight: 600;
+        }
+
+        button.secondary {
+            background: rgba(148, 163, 184, 0.2);
+            color: var(--text);
+        }
+
+        .stat {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.9rem;
+            padding: 6px 0;
+            border-bottom: 1px dashed rgba(148, 163, 184, 0.2);
+        }
+
+        .stat:last-child { border-bottom: none; }
+
+        .canvas-wrap {
+            position: relative;
+            display: grid;
+            gap: 10px;
+        }
+
+        canvas {
+            width: 100%;
+            height: 540px;
+            background: #0b1220;
+            border-radius: 16px;
+            border: 1px solid rgba(148, 163, 184, 0.25);
+        }
+
+        .legend {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .chip {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 8px;
+            border-radius: 999px;
+            background: rgba(148, 163, 184, 0.15);
+            font-size: 0.8rem;
+        }
+
+        .chip span {
+            width: 12px;
+            height: 12px;
+            border-radius: 2px;
+            display: inline-block;
+        }
+
+        .hotbar {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(68px, 1fr));
+            gap: 8px;
+        }
+
+        .hotbar button {
+            background: rgba(15, 23, 42, 0.9);
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            font-size: 0.8rem;
+        }
+
+        .hotbar button.active {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 2px rgba(74, 222, 128, 0.2);
+        }
+
+        .tip {
+            font-size: 0.85rem;
+            color: var(--muted);
+            line-height: 1.5;
+        }
+
+        @media (max-width: 900px) {
+            .content {
+                grid-template-columns: 1fr;
+            }
+            canvas { height: 420px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="widget">
+        <header>
+            <h1>Block World Explorer</h1>
+            <p>Generate a blocky sandbox world inspired by voxel adventures. Walk, mine, and build to shape your own landscape.</p>
+        </header>
+        <div class="content">
+            <aside class="panel controls">
+                <div>
+                    <label for="seedInput">World seed</label>
+                    <input id="seedInput" type="text" value="steve-2024" />
+                </div>
+                <div>
+                    <label for="biomeSelect">Biome style</label>
+                    <select id="biomeSelect">
+                        <option value="lush">Lush Valley</option>
+                        <option value="frost">Frost Peaks</option>
+                        <option value="mesa">Mesa Ridge</option>
+                        <option value="islands">Sky Islands</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="toolSelect">Tool</label>
+                    <select id="toolSelect">
+                        <option value="mine">Mine Blocks</option>
+                        <option value="build">Place Blocks</option>
+                    </select>
+                </div>
+                <button id="generateBtn">Generate World</button>
+                <button id="toggleLight" class="secondary">Toggle Day/Night</button>
+                <div class="panel">
+                    <h2>Explorer Stats</h2>
+                    <div class="stat"><span>Position</span><strong id="posStat">(0, 0)</strong></div>
+                    <div class="stat"><span>Biome</span><strong id="biomeStat">Lush Valley</strong></div>
+                    <div class="stat"><span>Blocks Edited</span><strong id="editStat">0</strong></div>
+                </div>
+                <div class="panel">
+                    <h2>Hotbar</h2>
+                    <div class="hotbar" id="hotbar"></div>
+                </div>
+                <p class="tip">Move with WASD or arrow keys. Click a tile to mine or place blocks. Swap tools with the menu above.</p>
+            </aside>
+            <section class="canvas-wrap">
+                <canvas id="worldCanvas" width="900" height="540"></canvas>
+                <div class="panel">
+                    <h2>Block Legend</h2>
+                    <div class="legend" id="legend"></div>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('worldCanvas');
+        const ctx = canvas.getContext('2d');
+        const seedInput = document.getElementById('seedInput');
+        const biomeSelect = document.getElementById('biomeSelect');
+        const toolSelect = document.getElementById('toolSelect');
+        const generateBtn = document.getElementById('generateBtn');
+        const toggleLightBtn = document.getElementById('toggleLight');
+        const posStat = document.getElementById('posStat');
+        const biomeStat = document.getElementById('biomeStat');
+        const editStat = document.getElementById('editStat');
+        const legend = document.getElementById('legend');
+        const hotbar = document.getElementById('hotbar');
+
+        const TILE_SIZE = 36;
+        const WORLD_SIZE = 72;
+        const VIEW_RADIUS = 8;
+        let world = [];
+        let player = { x: 36, y: 36 };
+        let edits = 0;
+        let isNight = false;
+
+        const BLOCKS = {
+            air: { name: 'Air', color: 'rgba(0,0,0,0)', walkable: true },
+            water: { name: 'Water', color: '#38bdf8', shade: '#0ea5e9', walkable: false },
+            sand: { name: 'Sand', color: '#facc15', shade: '#eab308', walkable: true },
+            grass: { name: 'Grass', color: '#4ade80', shade: '#16a34a', walkable: true },
+            dirt: { name: 'Dirt', color: '#a16207', shade: '#713f12', walkable: true },
+            stone: { name: 'Stone', color: '#94a3b8', shade: '#475569', walkable: true },
+            wood: { name: 'Wood', color: '#b45309', shade: '#78350f', walkable: true },
+            leaves: { name: 'Leaves', color: '#22c55e', shade: '#15803d', walkable: true },
+            snow: { name: 'Snow', color: '#e2e8f0', shade: '#cbd5f5', walkable: true },
+            clay: { name: 'Clay', color: '#fb7185', shade: '#e11d48', walkable: true },
+            basalt: { name: 'Basalt', color: '#475569', shade: '#1e293b', walkable: true }
+        };
+
+        const BUILDABLE = ['grass', 'dirt', 'stone', 'sand', 'wood', 'leaves', 'water'];
+        let activeBlock = 'grass';
+
+        const BIOME_SETTINGS = {
+            lush: { waterLevel: 0.3, snowLevel: 0.85, block: 'grass', hillBlock: 'stone', treeChance: 0.12 },
+            frost: { waterLevel: 0.25, snowLevel: 0.55, block: 'snow', hillBlock: 'stone', treeChance: 0.05 },
+            mesa: { waterLevel: 0.15, snowLevel: 0.95, block: 'clay', hillBlock: 'basalt', treeChance: 0.02 },
+            islands: { waterLevel: 0.42, snowLevel: 0.9, block: 'grass', hillBlock: 'stone', treeChance: 0.08 }
+        };
+
+        function hash(seed, x, y) {
+            let value = seed * 374761393 + x * 668265263 + y * 2147483647;
+            value = (value ^ (value >> 13)) * 1274126177;
+            return (value ^ (value >> 16)) >>> 0;
+        }
+
+        function seededRandom(seed, x, y) {
+            return hash(seed, x, y) / 4294967295;
+        }
+
+        function smoothNoise(seed, x, y) {
+            const corners = (seededRandom(seed, x - 1, y - 1) + seededRandom(seed, x + 1, y - 1) + seededRandom(seed, x - 1, y + 1) + seededRandom(seed, x + 1, y + 1)) / 16;
+            const sides = (seededRandom(seed, x - 1, y) + seededRandom(seed, x + 1, y) + seededRandom(seed, x, y - 1) + seededRandom(seed, x, y + 1)) / 8;
+            const center = seededRandom(seed, x, y) / 4;
+            return corners + sides + center;
+        }
+
+        function valueNoise(seed, x, y) {
+            const scale = 8;
+            let total = 0;
+            let frequency = 1;
+            let amplitude = 1;
+            let maxValue = 0;
+
+            for (let i = 0; i < 4; i++) {
+                const sampleX = Math.floor(x / scale * frequency);
+                const sampleY = Math.floor(y / scale * frequency);
+                total += smoothNoise(seed + i * 13, sampleX, sampleY) * amplitude;
+                maxValue += amplitude;
+                amplitude *= 0.5;
+                frequency *= 2;
+            }
+            return total / maxValue;
+        }
+
+        function generateWorld() {
+            const seed = Array.from(seedInput.value).reduce((acc, char) => acc + char.charCodeAt(0), 0) || 1;
+            const biomeKey = biomeSelect.value;
+            const biome = BIOME_SETTINGS[biomeKey];
+            biomeStat.textContent = biomeSelect.options[biomeSelect.selectedIndex].text;
+
+            world = Array.from({ length: WORLD_SIZE }, () => Array.from({ length: WORLD_SIZE }, () => ({ type: 'air', height: 0 })));
+
+            for (let y = 0; y < WORLD_SIZE; y++) {
+                for (let x = 0; x < WORLD_SIZE; x++) {
+                    const height = valueNoise(seed, x, y);
+                    const isWater = height < biome.waterLevel;
+                    const isSnow = height > biome.snowLevel;
+                    const baseBlock = isWater ? 'water' : isSnow ? 'snow' : biome.block;
+                    const hillBlock = height > 0.65 ? biome.hillBlock : baseBlock;
+
+                    world[y][x] = {
+                        type: hillBlock,
+                        height: height
+                    };
+
+                    if (baseBlock === 'water') {
+                        world[y][x].type = 'water';
+                    }
+
+                    const treeChance = seededRandom(seed + 92, x, y);
+                    if (treeChance < biome.treeChance && baseBlock !== 'water' && height < biome.snowLevel) {
+                        world[y][x].type = 'wood';
+                        if (y > 0) world[y - 1][x].overlay = 'leaves';
+                    }
+                }
+            }
+
+            player = { x: Math.floor(WORLD_SIZE / 2), y: Math.floor(WORLD_SIZE / 2) };
+            edits = 0;
+            editStat.textContent = edits;
+            render();
+        }
+
+        function drawBlock(x, y, blockType, overlay) {
+            const block = BLOCKS[blockType];
+            if (blockType === 'air') return;
+
+            const px = x * TILE_SIZE;
+            const py = y * TILE_SIZE;
+            ctx.fillStyle = block.color;
+            ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
+
+            ctx.fillStyle = block.shade || 'rgba(0,0,0,0.15)';
+            ctx.fillRect(px, py + TILE_SIZE * 0.7, TILE_SIZE, TILE_SIZE * 0.3);
+
+            ctx.strokeStyle = 'rgba(0,0,0,0.2)';
+            ctx.strokeRect(px, py, TILE_SIZE, TILE_SIZE);
+
+            if (overlay) {
+                ctx.fillStyle = BLOCKS[overlay].color;
+                ctx.fillRect(px + TILE_SIZE * 0.2, py + TILE_SIZE * 0.1, TILE_SIZE * 0.6, TILE_SIZE * 0.6);
+            }
+        }
+
+        function render() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.save();
+            ctx.imageSmoothingEnabled = false;
+
+            const startX = Math.max(0, player.x - VIEW_RADIUS);
+            const startY = Math.max(0, player.y - VIEW_RADIUS);
+            const endX = Math.min(WORLD_SIZE - 1, player.x + VIEW_RADIUS);
+            const endY = Math.min(WORLD_SIZE - 1, player.y + VIEW_RADIUS);
+
+            for (let y = startY; y <= endY; y++) {
+                for (let x = startX; x <= endX; x++) {
+                    const tile = world[y][x];
+                    drawBlock(x - startX, y - startY, tile.type, tile.overlay);
+                }
+            }
+
+            const playerX = (player.x - startX + 0.5) * TILE_SIZE;
+            const playerY = (player.y - startY + 0.5) * TILE_SIZE;
+            ctx.fillStyle = '#f97316';
+            ctx.beginPath();
+            ctx.arc(playerX, playerY, TILE_SIZE * 0.22, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = '#fdba74';
+            ctx.stroke();
+
+            if (isNight) {
+                ctx.fillStyle = 'rgba(2, 6, 23, 0.45)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = 'rgba(250, 204, 21, 0.1)';
+                ctx.beginPath();
+                ctx.arc(playerX, playerY, TILE_SIZE * 2.8, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            ctx.restore();
+            posStat.textContent = `(${player.x}, ${player.y})`;
+        }
+
+        function isWalkable(x, y) {
+            if (x < 0 || y < 0 || x >= WORLD_SIZE || y >= WORLD_SIZE) return false;
+            const tile = world[y][x];
+            return BLOCKS[tile.type].walkable;
+        }
+
+        function movePlayer(dx, dy) {
+            const targetX = player.x + dx;
+            const targetY = player.y + dy;
+            if (isWalkable(targetX, targetY)) {
+                player.x = targetX;
+                player.y = targetY;
+                render();
+            }
+        }
+
+        function handleCanvasClick(event) {
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            const canvasX = (event.clientX - rect.left) * scaleX;
+            const canvasY = (event.clientY - rect.top) * scaleY;
+
+            const tileX = Math.floor(canvasX / TILE_SIZE);
+            const tileY = Math.floor(canvasY / TILE_SIZE);
+            const worldX = player.x - VIEW_RADIUS + tileX;
+            const worldY = player.y - VIEW_RADIUS + tileY;
+
+            if (worldX < 0 || worldY < 0 || worldX >= WORLD_SIZE || worldY >= WORLD_SIZE) return;
+
+            if (toolSelect.value === 'mine') {
+                if (world[worldY][worldX].type !== 'air') {
+                    world[worldY][worldX] = { type: 'air', height: 0 };
+                    edits += 1;
+                }
+            } else {
+                world[worldY][worldX].type = activeBlock;
+                world[worldY][worldX].overlay = undefined;
+                edits += 1;
+            }
+
+            editStat.textContent = edits;
+            render();
+        }
+
+        function buildLegend() {
+            legend.innerHTML = '';
+            Object.entries(BLOCKS).forEach(([key, block]) => {
+                if (key === 'air') return;
+                const chip = document.createElement('div');
+                chip.className = 'chip';
+                const swatch = document.createElement('span');
+                swatch.style.background = block.color;
+                chip.appendChild(swatch);
+                chip.append(block.name);
+                legend.appendChild(chip);
+            });
+        }
+
+        function buildHotbar() {
+            hotbar.innerHTML = '';
+            BUILDABLE.forEach((blockKey) => {
+                const button = document.createElement('button');
+                button.textContent = BLOCKS[blockKey].name;
+                button.style.borderColor = BLOCKS[blockKey].color;
+                if (blockKey === activeBlock) button.classList.add('active');
+                button.addEventListener('click', () => {
+                    activeBlock = blockKey;
+                    buildHotbar();
+                });
+                hotbar.appendChild(button);
+            });
+        }
+
+        document.addEventListener('keydown', (event) => {
+            switch (event.key.toLowerCase()) {
+                case 'w':
+                case 'arrowup':
+                    movePlayer(0, -1);
+                    break;
+                case 's':
+                case 'arrowdown':
+                    movePlayer(0, 1);
+                    break;
+                case 'a':
+                case 'arrowleft':
+                    movePlayer(-1, 0);
+                    break;
+                case 'd':
+                case 'arrowright':
+                    movePlayer(1, 0);
+                    break;
+                default:
+                    break;
+            }
+        });
+
+        canvas.addEventListener('click', handleCanvasClick);
+        generateBtn.addEventListener('click', generateWorld);
+        toggleLightBtn.addEventListener('click', () => {
+            isNight = !isNight;
+            toggleLightBtn.textContent = isNight ? 'Switch to Day' : 'Toggle Day/Night';
+            render();
+        });
+
+        buildLegend();
+        buildHotbar();
+        generateWorld();
+    </script>
+</body>
+</html>
