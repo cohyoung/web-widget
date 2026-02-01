@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Compare & Contrast Planner (Grade 9)</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f7f6f3;
+      --card: #ffffff;
+      --ink: #1e1e1e;
+      --muted: #5a5a5a;
+      --accent: #2f6fed;
+      --accent-soft: #e6efff;
+      --success: #1b8f5a;
+      --shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+      --radius: 18px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 24px;
+      font-family: "Trebuchet MS", "Segoe UI", Arial, sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+      line-height: 1.6;
+      letter-spacing: 0.02em;
+    }
+
+    .widget {
+      max-width: 1000px;
+      margin: 0 auto;
+      background: var(--card);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+
+    header {
+      padding: 28px 32px 24px;
+      background: linear-gradient(120deg, #eef3ff 0%, #f7f8ff 100%);
+      border-bottom: 1px solid #e2e5f0;
+    }
+
+    header h1 {
+      margin: 0 0 8px;
+      font-size: 1.9rem;
+    }
+
+    header p {
+      margin: 0;
+      color: var(--muted);
+      max-width: 760px;
+    }
+
+    main {
+      padding: 28px 32px 32px;
+      display: grid;
+      gap: 24px;
+    }
+
+    .section {
+      background: #fbfbff;
+      border: 1px solid #e6e8f4;
+      border-radius: 14px;
+      padding: 18px 20px;
+    }
+
+    .section h2 {
+      margin-top: 0;
+      font-size: 1.3rem;
+    }
+
+    .section h3 {
+      margin: 16px 0 8px;
+      font-size: 1.1rem;
+    }
+
+    .grid-2 {
+      display: grid;
+      gap: 16px;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    }
+
+    label {
+      font-weight: 600;
+      display: block;
+      margin-bottom: 6px;
+    }
+
+    input[type="text"],
+    textarea,
+    select {
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1px solid #cfd6f1;
+      font-size: 1rem;
+      font-family: inherit;
+      background: #ffffff;
+    }
+
+    textarea {
+      min-height: 90px;
+      resize: vertical;
+    }
+
+    button {
+      border: none;
+      padding: 10px 14px;
+      border-radius: 10px;
+      background: var(--accent);
+      color: white;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    button.secondary {
+      background: #e1e6f7;
+      color: #234;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 12px;
+      background: var(--accent-soft);
+      border-radius: 999px;
+      font-weight: 600;
+      color: #234;
+      margin-bottom: 10px;
+    }
+
+    .checklist {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: grid;
+      gap: 10px;
+    }
+
+    .checklist li {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      background: #ffffff;
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1px solid #e5e8f8;
+    }
+
+    .checklist input {
+      margin-top: 4px;
+    }
+
+    .two-column {
+      display: grid;
+      gap: 16px;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    }
+
+    .list-input {
+      display: flex;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .list-input input {
+      flex: 1;
+    }
+
+    .list-output {
+      margin-top: 12px;
+      padding: 0;
+      list-style: none;
+      display: grid;
+      gap: 6px;
+    }
+
+    .list-output li {
+      padding: 8px 10px;
+      background: #ffffff;
+      border-radius: 8px;
+      border: 1px dashed #cfd6f1;
+    }
+
+    .sentence-starters {
+      display: grid;
+      gap: 8px;
+      margin: 10px 0 0;
+    }
+
+    .starter {
+      background: #ffffff;
+      padding: 8px 10px;
+      border-radius: 8px;
+      border: 1px solid #e5e8f8;
+    }
+
+    .outline {
+      border-left: 4px solid var(--accent);
+      padding-left: 14px;
+      margin-top: 10px;
+    }
+
+    .outline p {
+      margin: 6px 0;
+    }
+
+    .footer-note {
+      font-size: 0.95rem;
+      color: var(--muted);
+    }
+
+    .progress {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .progress strong {
+      color: var(--success);
+    }
+
+    @media (max-width: 700px) {
+      body {
+        padding: 16px;
+      }
+
+      header, main {
+        padding: 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="widget" role="main" aria-label="Compare and contrast planning widget">
+    <header>
+      <h1>Compare &amp; Contrast Paper Planner</h1>
+      <p>
+        Built for 9th grade writers: short steps, clear headings, and plenty of space. Use this
+        planner to organize ideas before you start drafting.
+      </p>
+    </header>
+
+    <main>
+      <section class="section" aria-labelledby="step-1">
+        <div class="pill" id="step-1">Step 1 · Understand the prompt</div>
+        <div class="grid-2">
+          <div>
+            <label for="prompt">Copy your teacher's prompt</label>
+            <textarea id="prompt" placeholder="Example: Compare and contrast the themes in two short stories."></textarea>
+          </div>
+          <div>
+            <label for="purpose">What is your purpose?</label>
+            <select id="purpose">
+              <option>Show how two things are alike and different</option>
+              <option>Show which choice is better (argue)</option>
+              <option>Explain why differences matter</option>
+              <option>Explain why similarities matter</option>
+            </select>
+            <label for="audience" style="margin-top: 12px;">Who will read this?</label>
+            <input id="audience" type="text" placeholder="Example: My English teacher and classmates" />
+          </div>
+        </div>
+      </section>
+
+      <section class="section" aria-labelledby="step-2">
+        <div class="pill" id="step-2">Step 2 · Pick your topics</div>
+        <div class="grid-2">
+          <div>
+            <label for="topic-a">Topic A</label>
+            <input id="topic-a" type="text" placeholder="Example: Story A" />
+          </div>
+          <div>
+            <label for="topic-b">Topic B</label>
+            <input id="topic-b" type="text" placeholder="Example: Story B" />
+          </div>
+        </div>
+        <p class="footer-note">Tip: Keep the topics balanced (same type of thing).</p>
+      </section>
+
+      <section class="section" aria-labelledby="step-3">
+        <div class="pill" id="step-3">Step 3 · Brainstorm similarities &amp; differences</div>
+        <div class="two-column">
+          <div>
+            <h3>Similarities (both)</h3>
+            <div class="list-input">
+              <input id="similar-input" type="text" placeholder="Add a similarity" />
+              <button type="button" id="add-similar">Add</button>
+            </div>
+            <ul class="list-output" id="similar-list"></ul>
+          </div>
+          <div>
+            <h3>Differences (A vs. B)</h3>
+            <div class="list-input">
+              <input id="diff-input" type="text" placeholder="Add a difference" />
+              <button type="button" id="add-diff">Add</button>
+            </div>
+            <ul class="list-output" id="diff-list"></ul>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" aria-labelledby="step-4">
+        <div class="pill" id="step-4">Step 4 · Choose an organization</div>
+        <div class="grid-2">
+          <div>
+            <label for="structure">Organization style</label>
+            <select id="structure">
+              <option value="block">Block (A then B)</option>
+              <option value="point">Point-by-point</option>
+            </select>
+            <p class="footer-note">Block = discuss Topic A completely, then Topic B. Point-by-point = switch back and forth by category.</p>
+          </div>
+          <div>
+            <label for="focus">Main idea (working thesis)</label>
+            <textarea id="focus" placeholder="Example: Although both stories show bravery, Story A focuses on family while Story B focuses on freedom."></textarea>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" aria-labelledby="step-5">
+        <div class="pill" id="step-5">Step 5 · Plan your paragraphs</div>
+        <div class="grid-2">
+          <div>
+            <h3>Paragraph plan</h3>
+            <div class="outline" id="outline">
+              <p><strong>Introduction:</strong> Hook + background + thesis.</p>
+              <p><strong>Body 1:</strong> First comparison point or Topic A.</p>
+              <p><strong>Body 2:</strong> Second comparison point or Topic B.</p>
+              <p><strong>Body 3 (optional):</strong> Extra point or deeper analysis.</p>
+              <p><strong>Conclusion:</strong> Restate thesis + why it matters.</p>
+            </div>
+          </div>
+          <div>
+            <h3>Sentence starters (pick a few)</h3>
+            <div class="sentence-starters">
+              <div class="starter">Both <span id="starter-a">Topic A</span> and <span id="starter-b">Topic B</span> show...</div>
+              <div class="starter">In contrast, <span id="starter-a-2">Topic A</span> focuses on..., while <span id="starter-b-2">Topic B</span> focuses on...</div>
+              <div class="starter">One key similarity is...</div>
+              <div class="starter">A major difference is...</div>
+              <div class="starter">This matters because...</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" aria-labelledby="step-6">
+        <div class="pill" id="step-6">Step 6 · Writing checklist</div>
+        <ul class="checklist" id="checklist">
+          <li><input type="checkbox" /> I understood the prompt and my purpose.</li>
+          <li><input type="checkbox" /> I picked two balanced topics.</li>
+          <li><input type="checkbox" /> I listed similarities and differences.</li>
+          <li><input type="checkbox" /> I wrote a clear thesis.</li>
+          <li><input type="checkbox" /> My paragraphs match my organization style.</li>
+          <li><input type="checkbox" /> I used transitions like “similarly” or “on the other hand.”</li>
+          <li><input type="checkbox" /> I ended with why the comparison matters.</li>
+        </ul>
+        <div class="progress" aria-live="polite">
+          <span id="progress-text">Progress: 0 of 7 checked.</span>
+          <strong id="progress-celebrate"></strong>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    const addListItem = (inputId, listId) => {
+      const input = document.getElementById(inputId);
+      const list = document.getElementById(listId);
+
+      const add = () => {
+        const value = input.value.trim();
+        if (!value) return;
+        const item = document.createElement("li");
+        item.textContent = value;
+        list.appendChild(item);
+        input.value = "";
+        input.focus();
+      };
+
+      input.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") {
+          event.preventDefault();
+          add();
+        }
+      });
+
+      return add;
+    };
+
+    const addSimilarity = addListItem("similar-input", "similar-list");
+    const addDifference = addListItem("diff-input", "diff-list");
+
+    document.getElementById("add-similar").addEventListener("click", addSimilarity);
+    document.getElementById("add-diff").addEventListener("click", addDifference);
+
+    const topicInputs = [
+      { id: "topic-a", targets: ["starter-a", "starter-a-2"] },
+      { id: "topic-b", targets: ["starter-b", "starter-b-2"] }
+    ];
+
+    topicInputs.forEach(({ id, targets }) => {
+      const input = document.getElementById(id);
+      const update = () => {
+        const text = input.value.trim() || (id === "topic-a" ? "Topic A" : "Topic B");
+        targets.forEach((target) => {
+          document.getElementById(target).textContent = text;
+        });
+      };
+      input.addEventListener("input", update);
+    });
+
+    const checklist = document.getElementById("checklist");
+    const progressText = document.getElementById("progress-text");
+    const progressCelebrate = document.getElementById("progress-celebrate");
+
+    const updateProgress = () => {
+      const items = checklist.querySelectorAll("input[type='checkbox']");
+      const checked = checklist.querySelectorAll("input[type='checkbox']:checked").length;
+      progressText.textContent = `Progress: ${checked} of ${items.length} checked.`;
+      progressCelebrate.textContent = checked === items.length ? "Nice work — you are ready to draft!" : "";
+    };
+
+    checklist.addEventListener("change", updateProgress);
+    updateProgress();
+  </script>
+</body>
+</html>
